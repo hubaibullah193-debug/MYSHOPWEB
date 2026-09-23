@@ -37,13 +37,36 @@
 - [x] Test inventory sync on page refresh
 - [x] Commit
 
-## Step 5: Guest Checkout (IN PROGRESS)
-- [ ] Create shopping cart (client-side state)
-- [ ] Build checkout form (customer details, phone, address, email)
-- [ ] Implement order creation (POST /api/orders)
-- [ ] Set order status to `pending_payment`
-- [ ] Create order confirmation page
-- [ ] Test full checkout flow (product → cart → checkout → order created)
+## Step 5: Guest Checkout ✓ (COMPLETE)
+- [x] Create shopping cart (client-side state)
+- [x] Build checkout form (customer details, phone, address, email)
+- [x] Implement order creation (POST /api/orders)
+- [x] Set order status to `pending_payment`
+- [x] Create order confirmation page
+- [x] Test full checkout flow (product → cart → checkout → order created)
+- [x] Commit
+
+---
+
+## Phase 1 MVP - Currently Complete (5/10 Steps)
+
+**Completed Features:**
+- ✓ Project infrastructure (Next.js, TypeScript, Supabase integration)
+- ✓ Database schema with RLS policies (role-based access control)
+- ✓ Customer authentication (signup/login with session management)
+- ✓ Product catalog with real-time inventory display
+- ✓ Guest checkout workflow (cart → order creation with pending_payment)
+
+**Remaining Phase 1 Steps (5/10):**
+
+## Step 6: Order Management Dashboard
+- [ ] Create admin order list page
+- [ ] Build order detail page (items, customer, status)
+- [ ] Implement order status update (admin can transition status)
+- [ ] Add delivery method selection (self / courier)
+- [ ] Add delivery date/time picker
+- [ ] Implement admin order assignment workflow
+- [ ] Test admin workflows (view orders, update status, assign delivery)
 - [ ] Commit
 - [ ] Create products table seed data
 - [ ] Build product listing page (gallery view)
