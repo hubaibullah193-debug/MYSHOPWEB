@@ -28,7 +28,23 @@
 - [x] Test auth flows (login, logout, session persistence)
 - [x] Commit
 
-## Step 4: Product Listing & Inventory (IN PROGRESS)
+## Step 4: Product Listing & Inventory ✓ (COMPLETE)
+- [x] Create products table seed data
+- [x] Build product listing page (gallery view)
+- [x] Build product detail page
+- [x] Implement real-time inventory display
+- [x] Add product filtering (category, price)
+- [x] Test inventory sync on page refresh
+- [x] Commit
+
+## Step 5: Guest Checkout (IN PROGRESS)
+- [ ] Create shopping cart (client-side state)
+- [ ] Build checkout form (customer details, phone, address, email)
+- [ ] Implement order creation (POST /api/orders)
+- [ ] Set order status to `pending_payment`
+- [ ] Create order confirmation page
+- [ ] Test full checkout flow (product → cart → checkout → order created)
+- [ ] Commit
 - [ ] Create products table seed data
 - [ ] Build product listing page (gallery view)
 - [ ] Build product detail page
