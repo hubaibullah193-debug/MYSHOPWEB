@@ -9,7 +9,16 @@
 - [x] Verify build succeeds (`npm run build`)
 - [x] Initial commit
 
-## Step 2: Database Schema + RLS Policies (IN PROGRESS)
+## Step 2: Database Schema + RLS Policies ✓ (COMPLETE)
+- [x] Create Supabase project and connect
+- [x] Define database tables (users, products, orders, payments, inventory_logs, order_requests, activity_logs)
+- [x] Create RLS policies for customer/admin/owner isolation
+- [x] Create migrations in supabase/ directory
+- [x] Test schema locally with `supabase db reset`
+- [x] Verify RLS policies with test queries
+- [x] Commit
+
+## Step 3: Authentication (IN PROGRESS)
 - [ ] Create Supabase project and connect
 - [ ] Define database tables (users, products, orders, payments, inventory_logs, order_requests, activity_logs)
 - [ ] Create RLS policies for customer/admin/owner isolation
