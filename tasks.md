@@ -1,15 +1,15 @@
 # Phase 1 Implementation Checklist
 
-## Step 1: Project Setup ✓ (IN PROGRESS)
-- [ ] Initialize git repository
-- [ ] Create Next.js project with TypeScript
-- [ ] Install core dependencies (React, TailwindCSS, i18n, testing)
-- [ ] Configure environment variables (.env.example)
-- [ ] Set up Vercel deployment config
-- [ ] Verify build succeeds (`npm run build`)
-- [ ] Initial commit
+## Step 1: Project Setup ✓ (COMPLETE)
+- [x] Initialize git repository
+- [x] Create Next.js project with TypeScript
+- [x] Install core dependencies (React, TailwindCSS, i18n, testing)
+- [x] Configure environment variables (.env.example)
+- [x] Set up Vercel deployment config
+- [x] Verify build succeeds (`npm run build`)
+- [x] Initial commit
 
-## Step 2: Database Schema + RLS Policies
+## Step 2: Database Schema + RLS Policies (IN PROGRESS)
 - [ ] Create Supabase project and connect
 - [ ] Define database tables (users, products, orders, payments, inventory_logs, order_requests, activity_logs)
 - [ ] Create RLS policies for customer/admin/owner isolation
