@@ -18,7 +18,24 @@
 - [x] Verify RLS policies with test queries
 - [x] Commit
 
-## Step 3: Authentication (IN PROGRESS)
+## Step 3: Authentication ✓ (COMPLETE)
+- [x] Set up Supabase Auth client in Next.js
+- [x] Create login page (customer)
+- [x] Create signup page (customer)
+- [x] Create admin login page
+- [x] Implement session middleware (useAuth hook)
+- [x] Protect routes with role-based guards
+- [x] Test auth flows (login, logout, session persistence)
+- [x] Commit
+
+## Step 4: Product Listing & Inventory (IN PROGRESS)
+- [ ] Create products table seed data
+- [ ] Build product listing page (gallery view)
+- [ ] Build product detail page
+- [ ] Implement real-time inventory display
+- [ ] Add product filtering (category, price)
+- [ ] Test inventory sync on page refresh
+- [ ] Commit
 - [ ] Create Supabase project and connect
 - [ ] Define database tables (users, products, orders, payments, inventory_logs, order_requests, activity_logs)
 - [ ] Create RLS policies for customer/admin/owner isolation
