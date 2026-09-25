@@ -111,7 +111,7 @@
 - [ ] Test full checkout flow (product → cart → checkout → order created)
 - [ ] Commit
 
-## Step 6: Order Management Dashboard
+## Step 6: Order Management Dashboard (IN PROGRESS)
 - [ ] Create admin order list page
 - [ ] Build order detail page (items, customer, status)
 - [ ] Implement order status update (admin can transition status)
