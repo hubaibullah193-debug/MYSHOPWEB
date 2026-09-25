@@ -20,6 +20,7 @@
     "next-i18n-router": "^5.5.8",
     "i18next": "^23.7.6",
     "react-i18next": "^14.0.0",
+    "i18next-browser-languagedetector": "^8.0.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
     "tailwind-merge": "^2.2.1"

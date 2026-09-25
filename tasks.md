@@ -1,172 +1,78 @@
 # Phase 1 Implementation Checklist
 
-## Step 1: Project Setup ✓ (COMPLETE)
-- [x] Initialize git repository
-- [x] Create Next.js project with TypeScript
-- [x] Install core dependencies (React, TailwindCSS, i18n, testing)
-- [x] Configure environment variables (.env.example)
-- [x] Set up Vercel deployment config
-- [x] Verify build succeeds (`npm run build`)
-- [x] Initial commit
+## Completed Steps ✅
 
-## Step 2: Database Schema + RLS Policies ✓ (COMPLETE)
-- [x] Create Supabase project and connect
-- [x] Define database tables (users, products, orders, payments, inventory_logs, order_requests, activity_logs)
-- [x] Create RLS policies for customer/admin/owner isolation
-- [x] Create migrations in supabase/ directory
-- [x] Test schema locally with `supabase db reset`
-- [x] Verify RLS policies with test queries
-- [x] Commit
+- [x] **Step 1: Project Setup** 
+  - Next.js 14, TypeScript, TailwindCSS, Supabase integration
+  - Configuration files, initial structure, environment setup
+  - Commit: Project Setup
 
-## Step 3: Authentication ✓ (COMPLETE)
-- [x] Set up Supabase Auth client in Next.js
-- [x] Create login page (customer)
-- [x] Create signup page (customer)
-- [x] Create admin login page
-- [x] Implement session middleware (useAuth hook)
-- [x] Protect routes with role-based guards
-- [x] Test auth flows (login, logout, session persistence)
-- [x] Commit
+- [x] **Step 2: Database Schema + RLS Policies**
+  - Tables: users, products, product_inventory, inventory_logs, orders, payments, order_requests, activity_logs
+  - Row-Level Security policies for role-based access (customer, admin_staff, super_admin, owner)
+  - Atomic inventory deduction via PL/pgSQL function
+  - Commit: Database Schema + RLS Policies
 
-## Step 4: Product Listing & Inventory ✓ (COMPLETE)
-- [x] Create products table seed data
-- [x] Build product listing page (gallery view)
-- [x] Build product detail page
-- [x] Implement real-time inventory display
-- [x] Add product filtering (category, price)
-- [x] Test inventory sync on page refresh
-- [x] Commit
+- [x] **Step 3: Authentication**
+  - Supabase Auth integration, signup/login pages for customers
+  - Admin login flow with role detection
+  - useAuth hook with session management, middleware protection
+  - Commit: Authentication System
 
-## Step 5: Guest Checkout ✓ (COMPLETE)
-- [x] Create shopping cart (client-side state)
-- [x] Build checkout form (customer details, phone, address, email)
-- [x] Implement order creation (POST /api/orders)
-- [x] Set order status to `pending_payment`
-- [x] Create order confirmation page
-- [x] Test full checkout flow (product → cart → checkout → order created)
-- [x] Commit
+- [x] **Step 4: Product Listing & Inventory**
+  - Product catalog page with filtering (category, price range)
+  - Product detail pages with stock status
+  - Real-time inventory updates via Supabase subscriptions
+  - Commit: Product Listing & Inventory Management
 
----
+- [x] **Step 5: Guest Checkout**
+  - Shopping cart with localStorage persistence
+  - Checkout form (email, phone, address, payment method)
+  - Order creation with atomic inventory deduction
+  - Commit: Guest Checkout & Cart System
 
-## Phase 1 MVP - Currently Complete (5/10 Steps)
+- [x] **Step 6: Order Management Dashboard**
+  - Admin dashboard for order list with status filtering
+  - Order detail page with delivery assignment (method, date, time slot)
+  - Order status updates and delivery tracking
+  - Commit: Order Management Dashboard
 
-**Completed Features:**
-- ✓ Project infrastructure (Next.js, TypeScript, Supabase integration)
-- ✓ Database schema with RLS policies (role-based access control)
-- ✓ Customer authentication (signup/login with session management)
-- ✓ Product catalog with real-time inventory display
-- ✓ Guest checkout workflow (cart → order creation with pending_payment)
+- [x] **Step 7: Payment Verification Workflow**
+  - Admin payment verification interface
+  - Pending payments list with confirmation/rejection flow
+  - Payment status updates tied to order status transitions
+  - Commit: Payment Verification Workflow
 
-**Remaining Phase 1 Steps (5/10):**
+- [x] **Step 8: Admin Activity Logging**
+  - Activity log table with admin action tracking (order updates, payment confirmations, etc.)
+  - Admin activity log viewing page with filtering (by action, entity type, date range)
+  - Activity summary cards and detailed audit trail
+  - Commit: Admin Activity Logging
 
-## Step 6: Order Management Dashboard
-- [ ] Create admin order list page
-- [ ] Build order detail page (items, customer, status)
-- [ ] Implement order status update (admin can transition status)
-- [ ] Add delivery method selection (self / courier)
-- [ ] Add delivery date/time picker
-- [ ] Implement admin order assignment workflow
-- [ ] Test admin workflows (view orders, update status, assign delivery)
-- [ ] Commit
-- [ ] Create products table seed data
-- [ ] Build product listing page (gallery view)
-- [ ] Build product detail page
-- [ ] Implement real-time inventory display
-- [ ] Add product filtering (category, price)
-- [ ] Test inventory sync on page refresh
-- [ ] Commit
-- [ ] Create Supabase project and connect
-- [ ] Define database tables (users, products, orders, payments, inventory_logs, order_requests, activity_logs)
-- [ ] Create RLS policies for customer/admin/owner isolation
-- [ ] Create migrations in supabase/ directory
-- [ ] Test schema locally with `supabase db reset`
-- [ ] Verify RLS policies with test queries
-- [ ] Commit
+## Pending Steps
 
-## Step 3: Authentication
-- [ ] Set up Supabase Auth client in Next.js
-- [ ] Create login page (customer)
-- [ ] Create signup page (customer)
-- [ ] Create admin login page
-- [ ] Implement session middleware (useAuth hook)
-- [ ] Protect routes with role-based guards
-- [ ] Test auth flows (login, logout, session persistence)
-- [ ] Commit
+- [ ] **Step 9: Bilingual UI (Urdu + English)**
+  - Configure next-i18n-router for customer-facing pages
+  - Translate key UI strings to Urdu
+  - RTL layout support for Urdu mode
+  - Admin panel English-only (per spec §18)
 
-## Step 4: Product Listing & Inventory
-- [ ] Create products table seed data
-- [ ] Build product listing page (gallery view)
-- [ ] Build product detail page
-- [ ] Implement real-time inventory display
-- [ ] Add product filtering (category, price)
-- [ ] Test inventory sync on page refresh
-- [ ] Commit
+- [ ] **Step 10: Testing & Verification**
+  - Unit tests for utility functions (auth, cart, orders, payments, inventory)
+  - Integration tests for critical workflows (checkout, payment confirmation, order updates)
+  - Manual testing of admin dashboard features
+  - Build verification and deployment dry-run
 
-## Step 5: Guest Checkout
-- [ ] Create shopping cart (client-side state)
-- [ ] Build checkout form (customer details, phone, address, email)
-- [ ] Implement order creation (POST /api/orders)
-- [ ] Set order status to `pending_payment`
-- [ ] Create order confirmation page
-- [ ] Test full checkout flow (product → cart → checkout → order created)
-- [ ] Commit
+## Phase 1 Completion Criteria
+All steps complete and verified against spec.md requirements:
+- ✅ Customer account signup/login
+- ✅ Product catalog with inventory
+- ✅ Guest checkout (email + delivery address)
+- ✅ Three payment methods supported (COD, JazzCash, Easypaisa)
+- ✅ Admin payment verification workflow
+- ✅ Order management with delivery assignment
+- ✅ Admin activity audit trail
+- ⏳ Bilingual UI (Urdu + English) - Step 9
+- ⏳ Full test coverage - Step 10
 
-## Step 6: Order Management Dashboard ✓ (COMPLETE)
-- [x] Create admin order list page
-- [x] Build order detail page (items, customer, status)
-- [x] Implement order status update (admin can transition status)
-- [x] Add delivery method selection (self / courier)
-- [x] Add delivery date/time picker
-- [x] Implement admin order assignment workflow
-- [x] Test admin workflows (view orders, update status, assign delivery)
-- [x] Commit
-
-## Step 7: Payment Verification Workflow ✓ (COMPLETE)
-- [x] Create payment record creation (COD, JazzCash, Easypaisa)
-- [x] Build payment verification page (admin dashboard)
-- [x] Implement COD confirmation (admin marks as confirmed)
-- [x] Create webhook handler for JazzCash/Easypaisa
-- [x] Implement manual payment verification (admin reviews, confirms)
-- [x] Create payment log display
-- [x] Test payment flows (COD confirmation, webhook receipt)
-- [x] Commit
-
-## Step 8: Admin Activity Logging (IN PROGRESS)
-- [ ] Create activity_logs table (if not already in schema)
-- [ ] Implement logging middleware for all admin API routes
-- [ ] Build activity log page (admin-only, read-only)
-- [ ] Add filters (admin user, date range, action type)
-- [ ] Test logging (create order, update status, confirm payment → appears in log)
-- [ ] Commit
-- [ ] Create activity_logs table (if not already in schema)
-- [ ] Implement logging middleware for all admin API routes
-- [ ] Build activity log page (admin-only, read-only)
-- [ ] Add filters (admin user, date range, action type)
-- [ ] Test logging (create order, update status, confirm payment → appears in log)
-- [ ] Commit
-
-## Step 9: Bilingual UI (Urdu + English)
-- [ ] Configure next-i18n-router
-- [ ] Add Urdu font stack and RTL styling
-- [ ] Create translation files (English, Urdu)
-- [ ] Build language switcher component
-- [ ] Translate key pages (product listing, checkout, admin dashboard)
-- [ ] Test RTL layout on admin pages
-- [ ] Commit
-
-## Step 10: Testing & Verification
-- [ ] Write unit tests for order logic (inventory deduction, order status transitions)
-- [ ] Write unit tests for payment validation logic
-- [ ] Write unit tests for auth (role checks, session validation)
-- [ ] Write integration tests for checkout flow (guest → order created → pending_payment)
-- [ ] Write integration tests for admin workflows (order update, payment confirmation)
-- [ ] Write E2E tests for full scenarios (product purchase → payment → admin fulfillment)
-- [ ] Run full test suite (`npm test`)
-- [ ] Security audit: verify RLS policies block unauthorized access
-- [ ] Performance check: Vercel build time, page load times
-- [ ] Final commit
-
-## Phase 1 Completion
-- [ ] All tests passing
-- [ ] Spec compliance verified
-- [ ] Ready for Phase 2 approval
+**Status:** 8/10 steps complete. Phase 1 MVP nearing completion.

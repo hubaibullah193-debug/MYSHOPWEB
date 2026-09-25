@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getCategories } from '@/lib/products'
 
 interface ProductFiltersProps {
@@ -12,6 +13,7 @@ interface ProductFiltersProps {
 }
 
 export default function ProductFilters({ onFilterChange }: ProductFiltersProps) {
+  const { t } = useTranslation()
   const [categories, setCategories] = useState<string[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [minPrice, setMinPrice] = useState<string>('')
@@ -43,12 +45,12 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
 
   return (
     <div className="bg-white p-4 rounded-lg shadow">
-      <h3 className="font-semibold text-gray-900 mb-4">Filters</h3>
+      <h3 className="font-semibold text-gray-900 mb-4">{t('products.filterByCategory')}</h3>
 
       {/* Category */}
       <div className="mb-6">
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Category
+          {t('products.category')}
         </label>
         <select
           value={selectedCategory}
@@ -67,13 +69,13 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
       {/* Price Range */}
       <div className="mb-6">
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Price Range (PKR)
+          {t('products.filterByPrice')} (PKR)
         </label>
         <div className="flex gap-2 items-end">
           <div className="flex-1">
             <input
               type="number"
-              placeholder="Min"
+              placeholder={t('products.minPrice')}
               value={minPrice}
               onChange={(e) => setMinPrice(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
@@ -83,7 +85,7 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
           <div className="flex-1">
             <input
               type="number"
-              placeholder="Max"
+              placeholder={t('products.maxPrice')}
               value={maxPrice}
               onChange={(e) => setMaxPrice(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
@@ -102,7 +104,7 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
           }}
           className="w-full px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
         >
-          Clear Filters
+          {t('products.clearFilters')}
         </button>
       )}
     </div>

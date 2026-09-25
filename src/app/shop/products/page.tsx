@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getProducts } from '@/lib/products'
 import type { ProductWithInventory } from '@/lib/products'
 import ProductCard from '@/components/ProductCard'
 import ProductFilters from '@/components/ProductFilters'
 
 export default function ShopPage() {
+  const { t } = useTranslation()
   const [products, setProducts] = useState<ProductWithInventory[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -48,7 +50,7 @@ export default function ShopPage() {
       <div className="lg:col-span-3">
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-gray-900">
-            Products {products.length > 0 && `(${products.length})`}
+            {t('products.title')} {products.length > 0 && `(${products.length})`}
           </h2>
         </div>
 
@@ -62,12 +64,12 @@ export default function ShopPage() {
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              <p className="mt-4 text-gray-600">Loading products...</p>
+              <p className="mt-4 text-gray-600">{t('common.loading')}</p>
             </div>
           </div>
         ) : products.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-12 text-center">
-            <p className="text-gray-600 text-lg">No products found</p>
+            <p className="text-gray-600 text-lg">{t('products.noProducts')}</p>
             <p className="text-gray-500 text-sm mt-2">Try adjusting your filters</p>
           </div>
         ) : (

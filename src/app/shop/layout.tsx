@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { signOut } from '@/lib/auth'
 import { useState } from 'react'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 
 export default function ShopLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -45,7 +46,8 @@ export default function ShopLayout({ children }: { children: React.ReactNode }) 
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Hubaib One Stop Shop</h1>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
+            <LanguageSwitcher />
             <div>
               <p className="text-sm text-gray-600">{user.email}</p>
               <p className="text-xs text-gray-500">{user.full_name}</p>
