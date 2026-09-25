@@ -121,17 +121,23 @@
 - [x] Test admin workflows (view orders, update status, assign delivery)
 - [x] Commit
 
-## Step 7: Payment Verification Workflow (IN PROGRESS)
-- [ ] Create payment record creation (COD, JazzCash, Easypaisa)
-- [ ] Build payment verification page (admin dashboard)
-- [ ] Implement COD confirmation (admin marks as confirmed)
-- [ ] Create webhook handler for JazzCash/Easypaisa
-- [ ] Implement manual payment verification (admin reviews, confirms)
-- [ ] Create payment log display
-- [ ] Test payment flows (COD confirmation, webhook receipt)
-- [ ] Commit
+## Step 7: Payment Verification Workflow ✓ (COMPLETE)
+- [x] Create payment record creation (COD, JazzCash, Easypaisa)
+- [x] Build payment verification page (admin dashboard)
+- [x] Implement COD confirmation (admin marks as confirmed)
+- [x] Create webhook handler for JazzCash/Easypaisa
+- [x] Implement manual payment verification (admin reviews, confirms)
+- [x] Create payment log display
+- [x] Test payment flows (COD confirmation, webhook receipt)
+- [x] Commit
 
-## Step 8: Admin Activity Logging
+## Step 8: Admin Activity Logging (IN PROGRESS)
+- [ ] Create activity_logs table (if not already in schema)
+- [ ] Implement logging middleware for all admin API routes
+- [ ] Build activity log page (admin-only, read-only)
+- [ ] Add filters (admin user, date range, action type)
+- [ ] Test logging (create order, update status, confirm payment → appears in log)
+- [ ] Commit
 - [ ] Create activity_logs table (if not already in schema)
 - [ ] Implement logging middleware for all admin API routes
 - [ ] Build activity log page (admin-only, read-only)
