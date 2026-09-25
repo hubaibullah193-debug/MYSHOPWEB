@@ -20,6 +20,28 @@ export interface Order {
 }
 
 /**
+ * Calculate order total from items
+ */
+export function calculateOrderTotal(items: any[]): number {
+  return items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+}
+
+/**
+ * Get status badge color for order status
+ */
+export function getOrderStatusBadgeColor(status: Order['status']): string {
+  const colors: Record<Order['status'], string> = {
+    pending_payment: 'bg-yellow-100 text-yellow-800',
+    confirmed: 'bg-blue-100 text-blue-800',
+    processing: 'bg-purple-100 text-purple-800',
+    shipped: 'bg-indigo-100 text-indigo-800',
+    delivered: 'bg-green-100 text-green-800',
+    cancelled: 'bg-red-100 text-red-800',
+  }
+  return colors[status] || 'bg-gray-100 text-gray-800'
+}
+
+/**
  * Get all orders with optional filtering
  */
 export async function getOrders(filters?: {
@@ -142,3 +164,4 @@ export async function getOrderStatusSummary() {
 
   return summary
 }
+

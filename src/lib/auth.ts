@@ -12,6 +12,23 @@ export interface User {
 }
 
 /**
+ * Validate email format
+ */
+export function validateEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
+/**
+ * Validate Pakistani phone number
+ */
+export function validatePhoneNumber(phone: string): boolean {
+  // Accept +923XX, 03XX, or 923XX format with 10-11 digits
+  const phoneRegex = /^(\+92|0|92)3\d{8,9}$/
+  return phoneRegex.test(phone.replace(/\s/g, ''))
+}
+
+/**
  * Get current session and user
  */
 export async function getCurrentUser() {
