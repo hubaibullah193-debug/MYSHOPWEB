@@ -111,17 +111,17 @@
 - [ ] Test full checkout flow (product → cart → checkout → order created)
 - [ ] Commit
 
-## Step 6: Order Management Dashboard (IN PROGRESS)
-- [ ] Create admin order list page
-- [ ] Build order detail page (items, customer, status)
-- [ ] Implement order status update (admin can transition status)
-- [ ] Add delivery method selection (self / courier)
-- [ ] Add delivery date/time picker
-- [ ] Implement admin order assignment workflow
-- [ ] Test admin workflows (view orders, update status, assign delivery)
-- [ ] Commit
+## Step 6: Order Management Dashboard ✓ (COMPLETE)
+- [x] Create admin order list page
+- [x] Build order detail page (items, customer, status)
+- [x] Implement order status update (admin can transition status)
+- [x] Add delivery method selection (self / courier)
+- [x] Add delivery date/time picker
+- [x] Implement admin order assignment workflow
+- [x] Test admin workflows (view orders, update status, assign delivery)
+- [x] Commit
 
-## Step 7: Payment Verification Workflow
+## Step 7: Payment Verification Workflow (IN PROGRESS)
 - [ ] Create payment record creation (COD, JazzCash, Easypaisa)
 - [ ] Build payment verification page (admin dashboard)
 - [ ] Implement COD confirmation (admin marks as confirmed)
