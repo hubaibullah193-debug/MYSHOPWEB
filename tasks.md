@@ -40,18 +40,22 @@ Each task is executed one at a time: implement → verify → commit → manual 
 - Apply migrations 001→002→003 to a real Supabase project and run the above suites to confirm runtime behavior (RLS, grants, RPCs, storage).
 - **Blocker:** no Supabase credentials and no local Postgres tooling — runtime verification is BLOCKED, not skipped. Nothing is claimed as live-verified.
 
-## T002 — Admin Authentication, RBAC & Admin Foundation — **PARTIAL**
+## T002 — Admin Authentication, RBAC & Admin Foundation — **PARTIAL (implementation PASS; live secrets still BLOCKED)**
 
-**Exists:**
-- Admin login page, `useAuth`, middleware protection for `/admin/:path*`, `requireAdmin` service-side guard on all admin APIs, DB role + `is_active` gate, sign-out, safe DB error mapping, activity logging.
-- Roles: `owner`, `super_admin`, `admin_staff`, `customer` in DB; UI/API checks use `admin_staff`+ / `super_admin`+.
+**Implemented (2026-10-02):**
+- **Password reset (§19.2):** `/admin/forgot-password` (email → Supabase reset link), `/admin/reset-password` (recovery-session page → server-rotated password with audit log), Owner/Super Admin manual reset tools (recovery link via `generateLink` — works without SMTP — or fresh temporary password) on the staff screen. Expiring/one-time semantics come from Supabase Auth's recovery tokens and password rotation.
+- **Admin account management (§18.1):** `/admin/settings/staff` (super-admin only) — create staff with one-time temp password, change role, activate/deactivate (deactivation rotates the password and immediately denies access), revoke sessions, reset link / temp password, permanent removal.
+- **Sessions & logout-all (§19.1):** `admin_sessions` now populated on login/logout; self **sign-out-all-devices** via `supabase.auth.signOut({ scope: 'global' })`; per-target revocation + forced re-login via password rotation (hosted GoTrue kills the target's sessions). Session rows carry IP + user-agent.
+- **Server-side RBAC:** new pure module `src/lib/admin-permissions.ts` (role rank, `canManageRole` — never equal/higher rank, never self, `owner` never assignable); `requireSuperAdmin` guard added to `supabase-server.ts`; every admin API self-authorizes.
+- **Protected admin routes:** middleware protects `/admin/:path*`, verifies `users.role` + `is_active`, bypasses the three auth pages, and gates `/admin/settings/staff`.
+- **Admin navigation (§17.2):** full sectioned sidebar (Dashboard, Orders, Payments, Refunds, Products, Categories, Inventory, Customers, Reviews, Printing Requests, Bulk Orders, Analytics, Delivery Zones, Website Content, Settings, Activity Log); unbuilt sections render non-functional placeholders instead of 404s.
+- **Secure auth errors:** login failures always report "Invalid email or password."; signed-in-but-not-admin is signed back out server-side; forgot-password never reveals whether an email is registered.
+- **Security/activity logging:** `admin_login`, `admin_logout`, `admin_sessions_revoked`, `admin_password_changed`, `admin_password_reset_completed`, `admin_account_created`, `admin_role_changed`, `admin_activated`, `admin_deactivated`, `admin_password_reset_link_generated`, `admin_password_reissued`, `admin_account_removed` with actor IP.
+- **Guest-only shopping (§7.3):** customer auth removed — `/login`, `/signup` pages deleted and `signUpCustomer` dropped; admins sign in only at `/admin/login`; no customer-account path remains in code.
 
-**Remaining:**
-- Password reset flow (spec §19.2) — missing entirely (forgot-password, secure token, owner reset).
-- Admin account management (owner: create/remove/activate/reset admins) — no UI/API (spec §18.1).
-- Logout-all-sessions / session revocation — not implemented (`admin_sessions` table unused).
-- Admin navigation completeness + missing routes (Products, Categories, Inventory, Refunds, Customers, Reviews, Delivery Zones, Settings…) create 404s (spec §17.2).
-- Remove/neutralize leftover **customer** signup/login (`/signup`, `/login`, links in shop + admin layouts) — spec §7.3 = **no customer accounts** (currently `role='customer'` auth path still exists).
+**Verified:** `tsc --noEmit` clean; jest 6 suites / 66 tests pass (+ 10 integration tests skip without creds); `next lint` clean; `next build` PASS (37 static + dynamic routes).
+
+**Blockers (live):** no Supabase env keys/SMTP → password-reset email delivery, hosted-GoTrue session-revocation-on-password-rotation, and create-account flows are implemented but not live-verified; Supabase's built-in auth rate limiting covers login brute force (edge rate limiting is not possible with client-side `signInWithPassword`).
 
 ## T003 — Products, Categories & Inventory — **PARTIAL**
 
@@ -156,7 +160,7 @@ Each task is executed one at a time: implement → verify → commit → manual 
 ## Open Decisions
 
 - **Online payment gateway (T006):** no provider approved/configured in the repo or `.env.example`. Selecting/integrating one (with verified docs + webhook signature verification per spec §10.6) is a blocker decision, not an implementation detail.
-- **Customer account leftovers (T002):** spec §7.3 forbids customer accounts, but `/signup`, `/login` and `signUpCustomer` still exist — remove or gate per confirmed intent.
+- **Customer account leftovers (T002):** resolved in T002 — `/signup`, `/login` and `signUpCustomer` removed (spec §7.3 = guest-only, no customer accounts).
 
 ## Phase 2 (unchanged)
 

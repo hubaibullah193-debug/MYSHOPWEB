@@ -1,6 +1,12 @@
 import { supabase } from './supabase'
+import {
+  isAdminRole,
+  isOwnerRole,
+  isSuperAdminRole,
+  type UserRole,
+} from './admin-permissions'
 
-export type UserRole = 'customer' | 'admin_staff' | 'super_admin' | 'owner'
+export type { UserRole }
 
 export interface User {
   id: string
@@ -32,6 +38,10 @@ export function validatePhoneNumber(phone: string): boolean {
  * Get current session and user
  */
 export async function getCurrentUser() {
+  if (!supabase?.auth) {
+    return null
+  }
+
   const {
     data: { session },
   } = await supabase.auth.getSession()
@@ -60,91 +70,73 @@ export async function getCurrentUser() {
 /**
  * Check if user has admin access
  */
-export function isAdmin(role: UserRole | null) {
-  return role && ['admin_staff', 'super_admin', 'owner'].includes(role)
+export function isAdmin(role: UserRole | null): boolean {
+  return isAdminRole(role)
 }
 
 /**
  * Check if user is owner or super admin
  */
-export function isSuperAdmin(role: UserRole | null) {
-  return role && ['super_admin', 'owner'].includes(role)
+export function isSuperAdmin(role: UserRole | null): boolean {
+  return isSuperAdminRole(role)
 }
 
 /**
  * Check if user is owner
  */
-export function isOwner(role: UserRole | null) {
-  return role === 'owner'
+export function isOwner(role: UserRole | null): boolean {
+  return isOwnerRole(role)
 }
 
 /**
- * Sign up customer
- */
-export async function signUpCustomer(
-  email: string,
-  password: string,
-  fullName: string,
-  phone: string
-) {
-  // Create auth user
-  const {
-    data: { user: authUser },
-    error: authError,
-  } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: {
-        full_name: fullName,
-        phone,
-      },
-    },
-  })
-
-  if (authError || !authUser) {
-    throw authError || new Error('Failed to create auth user')
-  }
-
-  // Create user profile in users table
-  const { error: profileError } = await supabase.from('users').insert({
-    id: authUser.id,
-    email,
-    full_name: fullName,
-    phone,
-    role: 'customer',
-  })
-
-  if (profileError) {
-    throw profileError
-  }
-
-  return authUser
-}
-
-/**
- * Sign in user (customer or admin)
+ * Sign in an admin with email & password.
+ * All failures map to a single generic message so that login
+ * never reveals whether an account exists or is active.
  */
 export async function signIn(email: string, password: string) {
-  const {
-    data: { session },
-    error,
-  } = await supabase.auth.signInWithPassword({
-    email,
+  if (!supabase?.auth) {
+    throw new Error('Authentication is not configured')
+  }
+  if (!validateEmail(email) || !password) {
+    throw new Error('Invalid email or password.')
+  }
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: email.trim().toLowerCase(),
     password,
   })
+
+  if (error || !data.session) {
+    throw new Error('Invalid email or password.')
+  }
+
+  return data.session
+}
+
+/**
+ * Ask Supabase to email a password-reset link. Always succeeds from the
+ * caller's perspective to avoid revealing whether the email is registered.
+ */
+export async function requestPasswordReset(email: string, redirectTo: string) {
+  if (!supabase?.auth) {
+    throw new Error('Authentication is not configured')
+  }
+
+  const { error } = await supabase.auth.resetPasswordForEmail(
+    email.trim().toLowerCase(),
+    { redirectTo }
+  )
 
   if (error) {
     throw error
   }
-
-  return session
 }
 
 /**
  * Sign out user
  */
 export async function signOut() {
+  if (!supabase?.auth) return
   const { error } = await supabase.auth.signOut()
   if (error) {
     throw error
@@ -155,6 +147,7 @@ export async function signOut() {
  * Get JWT token for API calls
  */
 export async function getAuthToken() {
+  if (!supabase?.auth) return undefined
   const {
     data: { session },
   } = await supabase.auth.getSession()

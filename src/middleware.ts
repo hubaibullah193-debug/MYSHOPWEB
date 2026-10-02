@@ -1,53 +1,54 @@
 import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { isAdminRole, isSuperAdminRole, type UserRole } from '@/lib/admin-permissions'
+
+const ADMIN_PUBLIC_PATHS = ['/admin/login', '/admin/forgot-password', '/admin/reset-password']
 
 export async function middleware(request: NextRequest) {
-  const res = NextResponse.next()
-  const supabase = createMiddlewareClient({ req: request, res })
+  if (
+    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  ) {
+    return NextResponse.next()
+  }
+
+  const response = NextResponse.next()
+  const supabase = createMiddlewareClient({ req: request, res: response })
+  const pathname = request.nextUrl.pathname
+
+  if (ADMIN_PUBLIC_PATHS.includes(pathname)) {
+    return response
+  }
 
   const {
     data: { session },
   } = await supabase.auth.getSession()
 
-  // Protect admin routes
-  if (request.nextUrl.pathname.startsWith('/admin')) {
-    if (!session) {
-      return NextResponse.redirect(new URL('/admin/login', request.url))
-    }
-
-    // Fetch user role
-    const { data: user } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!user || !['admin_staff', 'super_admin', 'owner'].includes(user.role)) {
-      return NextResponse.redirect(new URL('/auth/login', request.url))
-    }
+  if (!session) {
+    return NextResponse.redirect(new URL('/admin/login', request.url))
   }
 
-  // Protect shop routes (customer-only)
-  if (request.nextUrl.pathname.startsWith('/shop')) {
-    if (!session) {
-      return NextResponse.redirect(new URL('/auth/login', request.url))
-    }
+  const { data: profile } = await supabase
+    .from('users')
+    .select('role,is_active')
+    .eq('id', session.user.id)
+    .single()
 
-    const { data: user } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', session.user.id)
-      .single()
-
-    if (user && user.role !== 'customer') {
-      return NextResponse.redirect(new URL('/admin', request.url))
-    }
+  if (!profile || !profile.is_active || !isAdminRole(profile.role as UserRole)) {
+    return NextResponse.redirect(new URL('/admin/login', request.url))
   }
 
-  return res
+  if (
+    pathname.startsWith('/admin/settings/staff') &&
+    !isSuperAdminRole(profile.role as UserRole)
+  ) {
+    return NextResponse.redirect(new URL('/admin', request.url))
+  }
+
+  return response
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/shop/:path*'],
+  matcher: ['/admin/:path*'],
 }

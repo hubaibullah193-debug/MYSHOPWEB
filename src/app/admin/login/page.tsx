@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { signIn } from '@/lib/auth'
 import { useAuth } from '@/hooks/useAuth'
+import { recordAdminSessionStart, signOutAdmin } from '@/lib/admin-account'
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -14,10 +16,22 @@ export default function AdminLoginPage() {
   })
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
 
-  // Redirect if already logged in as admin
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.search.includes('reset=1')) {
+      setNotice('Your password has been updated. Please sign in with your new password.')
+    }
+  }, [])
+
+  const redirectAlreadySignedIn = useCallback(() => {
+    if (user && isAdmin) {
+      router.push('/admin')
+    }
+  }, [user, isAdmin, router])
+
   if (user && isAdmin) {
-    router.push('/admin')
+    redirectAlreadySignedIn()
     return null
   }
 
@@ -29,23 +43,25 @@ export default function AdminLoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    setNotice(null)
     setLoading(true)
 
     try {
-      if (!formData.email || !formData.password) {
-        throw new Error('Email and password are required')
-      }
-
       const session = await signIn(formData.email, formData.password)
-
       if (!session) {
-        throw new Error('Login failed')
+        throw new Error('Invalid email or password.')
       }
 
-      // Redirect to admin dashboard
+      try {
+        await recordAdminSessionStart()
+      } catch {
+        await signOutAdmin()
+        throw new Error('Your account does not have admin access or is not active.')
+      }
+
       router.push('/admin')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed')
+      setError(err instanceof Error ? err.message : 'Invalid email or password.')
     } finally {
       setLoading(false)
     }
@@ -63,6 +79,12 @@ export default function AdminLoginPage() {
           </p>
         </div>
 
+        {notice && (
+          <div className="rounded-md bg-emerald-50 p-4">
+            <p className="text-sm font-medium text-emerald-800">{notice}</p>
+          </div>
+        )}
+
         {error && (
           <div className="rounded-md bg-red-50 p-4">
             <p className="text-sm font-medium text-red-800">{error}</p>
@@ -79,6 +101,7 @@ export default function AdminLoginPage() {
                 id="email"
                 name="email"
                 type="email"
+                autoComplete="email"
                 required
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
                 placeholder="Admin Email"
@@ -94,6 +117,7 @@ export default function AdminLoginPage() {
                 id="password"
                 name="password"
                 type="password"
+                autoComplete="current-password"
                 required
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
                 placeholder="Password"
@@ -101,6 +125,15 @@ export default function AdminLoginPage() {
                 onChange={handleChange}
               />
             </div>
+          </div>
+
+          <div className="flex items-center justify-end">
+            <Link
+              href="/admin/forgot-password"
+              className="text-sm font-medium text-primary hover:text-indigo-500"
+            >
+              Forgot password?
+            </Link>
           </div>
 
           <div>
@@ -111,15 +144,6 @@ export default function AdminLoginPage() {
             >
               {loading ? 'Signing In...' : 'Admin Sign In'}
             </button>
-          </div>
-
-          <div className="text-center">
-            <p className="text-sm text-gray-600">
-              Customer?{' '}
-              <a href="/auth/login" className="font-medium text-primary hover:text-indigo-500">
-                Customer Login
-              </a>
-            </p>
           </div>
         </form>
       </div>

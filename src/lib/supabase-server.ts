@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js'
 import type { NextRequest } from 'next/server'
-import type { UserRole } from './auth'
+import { isAdminRole, isSuperAdminRole, type UserRole } from './admin-permissions'
 
 export interface ServerUserProfile {
   id: string
@@ -127,6 +127,31 @@ export function safeDatabaseError(error: { message?: string } | null | undefined
   return message && safeMessages.has(message) ? message : fallback
 }
 
+export interface ActivityLogEntry {
+  admin_id?: string | null
+  action: string
+  entity_type: string
+  entity_id?: string | null
+  changes?: Record<string, unknown> | null
+  ip_address?: string | null
+}
+
+/** Append a row to activity_logs using a service-role client. Never throws. */
+export async function logActivity(
+  client: SupabaseClient,
+  entry: ActivityLogEntry
+): Promise<boolean> {
+  const { error } = await client.from('activity_logs').insert({
+    admin_id: entry.admin_id ?? null,
+    action: entry.action,
+    entity_type: entry.entity_type,
+    entity_id: entry.entity_id ?? null,
+    changes: entry.changes ?? null,
+    ip_address: entry.ip_address ?? null,
+  })
+  return !error
+}
+
 export async function requireAdmin(request: NextRequest): Promise<AuthenticatedAdmin> {
   const authorization = request.headers.get('authorization')
   if (!authorization) {
@@ -147,7 +172,7 @@ export async function requireAdmin(request: NextRequest): Promise<AuthenticatedA
     .eq('id', data.user.id)
     .single()
 
-  if (profileError || !profile || !profile.is_active || !['admin_staff', 'super_admin', 'owner'].includes(profile.role)) {
+  if (profileError || !profile || !profile.is_active || !isAdminRole(profile.role)) {
     throw new ServerAuthError('Admin access required', 403)
   }
 
@@ -157,4 +182,12 @@ export async function requireAdmin(request: NextRequest): Promise<AuthenticatedA
     client: admin,
     accessToken,
   }
+}
+
+export async function requireSuperAdmin(request: NextRequest): Promise<AuthenticatedAdmin> {
+  const admin = await requireAdmin(request)
+  if (!isSuperAdminRole(admin.profile.role)) {
+    throw new ServerAuthError('Super admin access required', 403)
+  }
+  return admin
 }
