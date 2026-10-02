@@ -2,10 +2,10 @@
 
 -- Create test users with different roles
 INSERT INTO public.users (id, email, phone, full_name, role) VALUES
-  ('550e8400-e29b-41d4-a716-446655440001'::uuid, 'owner@hubaib.local', '03001234567', 'Shop Owner', 'owner'),
-  ('550e8400-e29b-41d4-a716-446655440002'::uuid, 'admin@hubaib.local', '03001234568', 'Admin Staff', 'admin_staff'),
-  ('550e8400-e29b-41d4-a716-446655440003'::uuid, 'customer1@test.com', '03001234569', 'Test Customer 1', 'customer'),
-  ('550e8400-e29b-41d4-a716-446655440004'::uuid, 'customer2@test.com', '03001234570', 'Test Customer 2', 'customer');
+   ('550e8400-e29b-41d4-a716-446655440001'::uuid, 'owner@hubaib.local', '923001234567', 'Shop Owner', 'owner'),
+   ('550e8400-e29b-41d4-a716-446655440002'::uuid, 'admin@hubaib.local', '923001234568', 'Admin Staff', 'admin_staff'),
+   ('550e8400-e29b-41d4-a716-446655440003'::uuid, 'customer1@test.com', '923001234569', 'Test Customer 1', 'customer'),
+   ('550e8400-e29b-41d4-a716-446655440004'::uuid, 'customer2@test.com', '923001234570', 'Test Customer 2', 'customer');
 
 -- Create test products
 INSERT INTO public.products (id, name, description, price, category, image_url) VALUES
@@ -29,12 +29,12 @@ INSERT INTO public.orders (
   '750e8400-e29b-41d4-a716-446655440001'::uuid,
   '550e8400-e29b-41d4-a716-446655440003'::uuid,
   'customer1@test.com',
-  '03001234569',
+   '923001234569',
   'Karachi, Pakistan',
   '[{"product_id": "650e8400-e29b-41d4-a716-446655440001", "quantity": 1, "price": 2999.00}]'::jsonb,
   2999.00,
-  'pending_payment',
-  'cod',
+   'received',
+   'cod',
   'pending'
 );
 
