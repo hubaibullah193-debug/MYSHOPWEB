@@ -7,6 +7,7 @@ import {
 } from '@/lib/validation'
 
 const productId = '650e8400-e29b-41d4-a716-446655440001'
+const zoneId = '741e8400-e29b-41d4-a716-446655440099'
 
 function orderPayload(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -17,6 +18,7 @@ function orderPayload(overrides: Record<string, unknown> = {}): Record<string, u
     items: [{ product_id: productId, quantity: 2 }],
     payment_method: 'cod',
     delivery_method: 'courier',
+    delivery_zone_id: zoneId,
     ...overrides,
   }
 }
@@ -40,12 +42,31 @@ describe('parseOrderInput', () => {
     expect(order.customer_phone).toBe('923001234567')
     expect(order.customer_address).toBe('Karachi, Pakistan')
     expect(order.delivery_method).toBe('courier')
+    expect(order.delivery_zone_id).toBe(zoneId)
+  })
+
+  it('rejects a courier order without a delivery zone', () => {
+    expect(() => parseOrderInput(orderPayload({ delivery_zone_id: '' }))).toThrow(ValidationError)
+    expect(() => parseOrderInput(orderPayload({ delivery_zone_id: undefined }))).toThrow(ValidationError)
+  })
+
+  it('rejects an invalid delivery zone id', () => {
+    expect(() => parseOrderInput(orderPayload({ delivery_zone_id: 'not-a-uuid' }))).toThrow(ValidationError)
+  })
+
+  it('rejects a delivery zone on a self-pickup order', () => {
+    expect(() =>
+      parseOrderInput(orderPayload({ delivery_method: 'self', customer_address: '' }))
+    ).toThrow(ValidationError)
   })
 
   it('accepts a self-pickup order without an address', () => {
-    const order = parseOrderInput(orderPayload({ delivery_method: 'self', customer_address: '' }))
+    const order = parseOrderInput(
+      orderPayload({ delivery_method: 'self', customer_address: '', delivery_zone_id: '' })
+    )
     expect(order.customer_address).toBe('')
     expect(order.delivery_method).toBe('self')
+    expect(order.delivery_zone_id).toBeUndefined()
   })
 
   it('rejects a courier order without an address', () => {

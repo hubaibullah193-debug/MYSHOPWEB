@@ -12,13 +12,16 @@
  *   - SUPABASE_TEST_SERVICE_ROLE_KEY
  *   - SUPABASE_TEST_ANON_KEY       (optional; enables RLS checks)
  *
- * Required before running: apply migrations 001 -> 002 -> 003 to the target
- * project (see supabase/tests/verify_phase1.sql), and seed at least the roles
- * the tests create themselves. The suite creates its own admin, products,
- * inventory and guest orders; it never touches application data.
+ * Required before running: apply migrations 001 -> 002 -> 003 -> 004 -> 005
+ * to the target project (see supabase/tests/verify_phase1.sql), and seed at
+ * least the roles the tests create themselves. The suite creates its own admin,
+ * products, inventory, delivery zones and guest orders; it never touches
+ * application data.
  *
  * Business rules verified here:
  *   - guest COD order creation + item snapshots + server-side totals
+ *   - delivery zone rules: courier requires an active zone, pickup forbids
+ *     zones, and the delivery fee is derived from the zone server-side
  *   - idempotency (same key -> same order; key + different hash -> rejected)
  *   - online payment requires transaction reference + valid payment evidence
  *   - atomic exactly-once inventory deduction on received -> processing
@@ -41,6 +44,8 @@ interface OrderRow {
   payment_status: string
   payment_method: string
   total_amount: number
+  delivery_fee?: number | string | null
+  delivery_zone_id?: string | null
   items: Array<{ product_id: string; product_name: string; price: number; quantity: number }>
 }
 
@@ -55,8 +60,11 @@ const adminId = randomUUID()
 const productAId = randomUUID()
 const productBId = randomUUID()
 const productCId = randomUUID()
+const testZoneId = randomUUID()
+const paidZoneId = randomUUID()
 
 const createdOrderIds: string[] = []
+const createdZoneIds: string[] = []
 const uploadedEvidenceKeys: string[] = []
 
 const ONE_PX_PNG = Buffer.from(
@@ -98,10 +106,12 @@ async function createOrder(
     total: number
     paymentMethod: 'cod' | 'jazz_cash' | 'easypaisa'
     deliveryMethod?: 'courier' | 'self'
+    zoneId?: string | null
     transactionId?: string | null
     evidence?: string | null
   }
 ): Promise<OrderRow> {
+  const zoneId = input.zoneId !== undefined ? input.zoneId : input.deliveryMethod === 'self' ? null : testZoneId
   const { data, error } = await admin.rpc('create_order_with_payment', {
     p_customer_id: null,
     p_customer_name: input.name ?? `Integration Test ${testSuffix}`,
@@ -116,6 +126,7 @@ async function createOrder(
     p_request_hash: input.hash,
     p_transaction_id: input.transactionId ?? null,
     p_payment_evidence: input.evidence ?? null,
+    p_delivery_zone_id: zoneId,
   })
   if (error || !data) {
     throw new Error(`create_order_with_payment failed: ${error?.message ?? 'no data'}`)
@@ -172,10 +183,13 @@ function hashFor(
     items: Array<{ product_id: string; quantity: number }>
     paymentMethod: string
     deliveryMethod?: string
+    zoneId?: string | null
     transactionId?: string | null
     evidence?: string | null
   }
 ): string {
+  const deliveryMethod = input.deliveryMethod ?? 'courier'
+  const zoneId = input.zoneId !== undefined ? input.zoneId : deliveryMethod === 'self' ? null : testZoneId
   return requestHash({
     customer_name: input.name ?? `Integration Test ${testSuffix}`,
     customer_email: input.email ?? `it-${testSuffix}@example.com`,
@@ -183,9 +197,10 @@ function hashFor(
     customer_address: input.address ?? 'Test Area, Adda Bazar, Mohmand, KPK',
     items: input.items.map((item) => ({ ...item, product_id: item.product_id })).sort((a, b) => a.product_id.localeCompare(b.product_id)),
     payment_method: input.paymentMethod,
-    delivery_method: input.deliveryMethod ?? 'courier',
+    delivery_method: deliveryMethod,
     transaction_id: input.transactionId ?? null,
     payment_evidence: input.evidence ?? null,
+    delivery_zone_id: zoneId,
   })
 }
 
@@ -227,6 +242,14 @@ describeMaybe('Phase 1 database integration', () => {
     const { error: inventoryError } = await admin.from('product_inventory').insert(inventory)
     if (inventoryError) throw new Error(`Failed to create test inventory: ${inventoryError.message}`)
 
+    const zones = [
+      { id: testZoneId, name: `IT Zone A ${testSuffix}`, fee: 0, is_active: true },
+      { id: paidZoneId, name: `IT Zone B ${testSuffix}`, fee: 50, is_active: true },
+    ]
+    const { error: zonesError } = await admin.from('delivery_zones').insert(zones)
+    if (zonesError) throw new Error(`Failed to create test delivery zones: ${zonesError.message}`)
+    createdZoneIds.push(testZoneId, paidZoneId)
+
     evidenceKey = await uploadEvidence(admin)
   })
 
@@ -238,6 +261,9 @@ describeMaybe('Phase 1 database integration', () => {
     }
     if (createdOrderIds.length > 0) {
       await admin.from('orders').delete().in('id', createdOrderIds)
+    }
+    if (createdZoneIds.length > 0) {
+      await admin.from('delivery_zones').delete().in('id', createdZoneIds)
     }
     await admin.from('inventory_logs').delete().in('product_id', [productAId, productBId, productCId])
     await admin.from('product_inventory').delete().in('product_id', [productAId, productBId, productCId])
@@ -259,8 +285,76 @@ describeMaybe('Phase 1 database integration', () => {
     expect(order.payment_status).toBe('pending')
     expect(order.payment_method).toBe('cod')
     expect(Number(order.total_amount)).toBe(200)
+    expect(Number(order.delivery_fee)).toBe(0)
+    expect(order.delivery_zone_id).toBe(testZoneId)
     expect(order.items).toHaveLength(1)
     expect(order.items[0]).toMatchObject({ product_id: productAId, quantity: 2, price: 100 })
+  })
+
+  test('derives the delivery fee from the selected zone and enforces zone rules', async () => {
+    const items = [{ product_id: productAId, quantity: 1 }]
+
+    await expect(
+      createOrder(admin, {
+        key: idempotencyKey(),
+        hash: hashFor({ items, paymentMethod: 'cod', zoneId: null }),
+        items,
+        total: 100,
+        paymentMethod: 'cod',
+        zoneId: null,
+      })
+    ).rejects.toThrow('Select a delivery zone')
+
+    await expect(
+      createOrder(admin, {
+        key: idempotencyKey(),
+        hash: hashFor({ items, paymentMethod: 'cod', deliveryMethod: 'self', zoneId: testZoneId }),
+        items,
+        total: 100,
+        paymentMethod: 'cod',
+        deliveryMethod: 'self',
+        zoneId: testZoneId,
+      })
+    ).rejects.toThrow('Pickup orders do not use a delivery zone')
+
+    const inactiveZoneId = randomUUID()
+    const { error: inactiveError } = await admin
+      .from('delivery_zones')
+      .insert({ id: inactiveZoneId, name: `IT Zone Inactive ${testSuffix}`, fee: 0, is_active: false })
+    if (inactiveError) throw new Error(`Failed to create inactive zone: ${inactiveError.message}`)
+    createdZoneIds.push(inactiveZoneId)
+    await expect(
+      createOrder(admin, {
+        key: idempotencyKey(),
+        hash: hashFor({ items, paymentMethod: 'cod', zoneId: inactiveZoneId }),
+        items,
+        total: 100,
+        paymentMethod: 'cod',
+        zoneId: inactiveZoneId,
+      })
+    ).rejects.toThrow('Delivery zone is not available')
+
+    const paid = await createOrder(admin, {
+      key: idempotencyKey(),
+      hash: hashFor({ items, paymentMethod: 'cod', zoneId: paidZoneId }),
+      items,
+      total: 150,
+      paymentMethod: 'cod',
+      zoneId: paidZoneId,
+    })
+    expect(Number(paid.total_amount)).toBe(150)
+    expect(Number(paid.delivery_fee)).toBe(50)
+    expect(paid.delivery_zone_id).toBe(paidZoneId)
+
+    const free = await createOrder(admin, {
+      key: idempotencyKey(),
+      hash: hashFor({ items, paymentMethod: 'cod' }),
+      items,
+      total: 100,
+      paymentMethod: 'cod',
+    })
+    expect(Number(free.delivery_fee)).toBe(0)
+    expect(free.delivery_zone_id).toBe(testZoneId)
   })
 
   test('rejects a tampered client-supplied total', async () => {

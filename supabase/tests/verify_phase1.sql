@@ -183,10 +183,10 @@ BEGIN
   FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
   WHERE n.nspname = 'public' AND p.proname = 'create_order_with_payment'
     AND pg_get_function_identity_arguments(p.oid) =
-        'uuid, text, text, text, text, jsonb, numeric, text, text, text, text, text, text'
+        'uuid, text, text, text, text, jsonb, numeric, text, text, text, text, text, text, uuid'
   LIMIT 1;
   IF f_create_order IS NULL THEN
-    RAISE EXCEPTION 'FAILED: create_order_with_payment(13 args) exists';
+    RAISE EXCEPTION 'FAILED: create_order_with_payment(14 args) exists';
   END IF;
 
   SELECT p.oid INTO f_transition
@@ -541,5 +541,71 @@ BEGIN
   END IF;
 
   RAISE NOTICE 'verify_phase1.sql: migration 004 catalogue checks passed';
+END;
+$verify$;
+
+-- =============================================================================
+-- Migration 005 delivery-zone checks: zones, RLS, orders.delivery_zone_id
+-- =============================================================================
+DO $verify$
+DECLARE
+  status_ok BOOLEAN;
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'delivery_zones'
+  ) THEN
+    RAISE EXCEPTION 'FAILED: table public.delivery_zones exists (migration 005)';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relname = 'delivery_zones' AND c.relrowsecurity
+  ) THEN
+    RAISE EXCEPTION 'FAILED: RLS enabled on public.delivery_zones';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'orders' AND column_name = 'delivery_zone_id'
+  ) THEN
+    RAISE EXCEPTION 'FAILED: orders.delivery_zone_id column exists';
+  END IF;
+
+  SELECT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    WHERE c.conrelid = 'public.delivery_zones'::regclass
+      AND c.contype = 'c'
+      AND pg_get_constraintdef(c.oid) LIKE '%fee%>=%0%'
+  ) INTO status_ok;
+  IF NOT status_ok THEN
+    RAISE EXCEPTION 'FAILED: delivery_zones.fee check constraint (fee >= 0)';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'delivery_zones'
+      AND policyname = 'Anyone can view active delivery zones' AND cmd = 'SELECT'
+  ) THEN
+    RAISE EXCEPTION 'FAILED: delivery_zones public-read-active policy';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'delivery_zones'
+      AND policyname = 'Admins manage delivery zones' AND cmd = 'ALL'
+  ) THEN
+    RAISE EXCEPTION 'FAILED: delivery_zones admin-manage policy';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE schemaname = 'public' AND indexname = 'idx_orders_delivery_zone'
+  ) THEN
+    RAISE EXCEPTION 'FAILED: index idx_orders_delivery_zone exists';
+  END IF;
+
+  RAISE NOTICE 'verify_phase1.sql: migration 005 delivery-zone checks passed';
 END;
 $verify$;

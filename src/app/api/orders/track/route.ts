@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     const admin = getSupabaseAdmin()
     const { data: order, error } = await admin
       .from('orders')
-      .select('id,customer_name,customer_phone,customer_address,items,total_amount,status,payment_method,payment_status,delivery_method,delivery_date,delivery_time_slot,created_at')
+      .select('id,customer_name,customer_phone,customer_address,items,total_amount,delivery_fee,delivery_zone_id,delivery_zones(name),status,payment_method,payment_status,delivery_method,delivery_date,delivery_time_slot,created_at')
       .eq('id', input.orderId)
       .eq('customer_phone', input.phone)
       .maybeSingle()

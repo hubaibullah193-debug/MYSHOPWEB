@@ -92,15 +92,27 @@ Each task is executed one at a time: implement → verify → commit → manual 
 **Remaining:**
 - Search + autocomplete (spec §6.5); availability/variant filters.
 - Variant-aware cart + checkout (choose a variant, price its sale).
-- Delivery fee in totals once zones exist (T005).
 - Order review step polish; payment instructions rendering from admin-sourced details.
 - Live verification blocked: no Supabase env keys; migration 004 + `verify_phase1.sql` not applied.
 
-## T005 — Delivery Zones & Shop Pickup — **MISSING**
+## T005 — Delivery Zones & Shop Pickup — **STATIC PASS / LIVE BLOCKED**
 
-- No `delivery_zones` table, no zone admin UI, no zone selection/fee calculation at checkout, no outside-zone handling (spec §8.1–8.3).
-- Shop pickup flow exists minimally (`self` method, PKR 0 note); pickup time suggestion, business-hours display missing.
-- Admin `assign_order_delivery` RPC + order-detail assignment UI exist (date/time/method); no zone/fee integration.
+**Exists:**
+- `005_delivery_zones.sql`: `delivery_zones` table (name 1–100, fee >= 0, is_active, display_order, RLS: anon SELECT active / admins ALL), `orders.delivery_zone_id` FK (`ON DELETE SET NULL`) + index; `create_order_with_payment` extended to 14 args (`p_delivery_zone_id`) — courier requires an active zone, `self` forbids zones, fee derived server-side from the zone, total = items + fee stored on order and payment.
+- `verify_phase1.sql` updated to the 14-arg signature + T005 zone checks; `db.integration.test.ts` updated (creates zones in `beforeAll`, asserts fee-derived totals + zone rules).
+- `validation.ts` (+ tests): `delivery_zone_id` on `OrderInput`; courier ⇒ zone required, self ⇒ no zone allowed.
+- Public GET `/api/delivery-zones` (active zones only, RLS-honouring anon client); admin zones API `/api/admin/delivery-zones` + `[id]` (requireAdmin, rate-limited, activity-logged; category pattern); `parseDeliveryZonePayload`; `delivery-zones-client.ts`.
+- `/api/orders` fetches the active zone, adds the fee to the total, passes the zone id to the RPC, includes it in the request hash; `/api/orders/track` + admin order selects expose `delivery_fee` + `delivery_zones(name)`; `Order.delivery_fee`/zone-name helpers.
+- Admin `/delivery-zones` page (create/edit/delete, active badge, fee, order count); admin order detail shows items / delivery fee / total + delivery zone.
+- Checkout: zone dropdown with fee, fee in summary + total, shop-pickup hours (7:00 AM–8:00 PM, PKR 0), outside-zone block + WhatsApp message; confirmation + track pages show delivery fee + zone.
+
+**Verified (static):**
+- `tsc --noEmit` clean; `next lint` clean; jest 7/8 suites, 101 pass, 11 skip; clean `next build` pass (pre-existing metadata-viewport warnings only).
+
+**Remaining:**
+- WhatsApp click-to-chat number not wired (no business-settings source yet) — rendered as text CTA only.
+- No seed reference zones for local demo.
+- Live verification blocked: no Supabase env keys; migration 005 + updated `verify_phase1.sql` not applied.
 
 ## T006 — Payments & Refund Operations — **PARTIAL**
 

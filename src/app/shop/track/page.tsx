@@ -15,6 +15,8 @@ interface TrackedOrder {
     quantity: number
   }>
   total_amount: number
+  delivery_fee?: number | string | null
+  delivery_zones?: { name: string } | { name: string }[] | null
   status: string
   payment_method: string
   payment_status: string
@@ -39,6 +41,12 @@ const paymentLabels: Record<string, string> = {
   paid: 'Paid',
   failed: 'Failed',
   refunded: 'Refunded',
+}
+
+function zoneNameOf(order: TrackedOrder): string | null {
+  const zone = order.delivery_zones
+  if (!zone) return null
+  return Array.isArray(zone) ? (zone[0]?.name ?? null) : zone.name
 }
 
 export default function TrackOrderPage() {
@@ -142,10 +150,13 @@ export default function TrackOrderPage() {
               <div>
                 <p className="text-gray-600">Delivery method</p>
                 <p className="font-medium text-gray-900 capitalize">{order.delivery_method || 'Not assigned'}</p>
+                {order.delivery_method === 'courier' && zoneNameOf(order) && (
+                  <p className="mt-1 text-xs text-gray-500">Zone: {zoneNameOf(order)}</p>
+                )}
               </div>
               <div className="sm:col-span-2">
                 <p className="text-gray-600">Address</p>
-                <p className="font-medium text-gray-900">{order.customer_address}</p>
+                <p className="font-medium text-gray-900">{order.customer_address || 'Shop pickup'}</p>
               </div>
               {order.delivery_date && (
                 <div>
@@ -168,6 +179,10 @@ export default function TrackOrderPage() {
                   <span>PKR {(item.price * item.quantity).toLocaleString()}</span>
                 </div>
               ))}
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Delivery fee</span>
+                <span>PKR {Number(order.delivery_fee ?? 0).toLocaleString()}</span>
+              </div>
               <div className="flex justify-between border-t border-gray-200 pt-3 font-bold text-gray-900">
                 <span>Total</span>
                 <span>PKR {order.total_amount.toLocaleString()}</span>

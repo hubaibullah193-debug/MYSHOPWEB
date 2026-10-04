@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
     let query = admin.client
       .from('orders')
-      .select('id,customer_id,customer_name,customer_email,customer_phone,customer_address,items,total_amount,status,payment_method,payment_status,delivery_method,delivery_date,delivery_time_slot,assigned_to,created_at,updated_at')
+      .select('id,customer_id,customer_name,customer_email,customer_phone,customer_address,items,total_amount,delivery_fee,delivery_zone_id,delivery_zones(name),status,payment_method,payment_status,delivery_method,delivery_date,delivery_time_slot,assigned_to,created_at,updated_at')
       .order('created_at', { ascending: false })
       .limit(limit)
 

@@ -22,6 +22,7 @@ export interface OrderInput {
   delivery_method: 'courier' | 'self'
   transaction_id?: string
   payment_evidence?: string
+  delivery_zone_id?: string
 }
 
 export class ValidationError extends Error {
@@ -127,6 +128,19 @@ export function parseOrderInput(value: unknown): OrderInput {
   if (!['courier', 'self'].includes(String(deliveryMethod))) {
     throw new ValidationError('Select a valid delivery method')
   }
+  const deliveryZoneId = value.delivery_zone_id === undefined || value.delivery_zone_id === null || value.delivery_zone_id === ''
+    ? undefined
+    : requiredText(value.delivery_zone_id, 'Delivery zone', 64)
+  if (deliveryZoneId !== undefined && !isValidUuid(deliveryZoneId)) {
+    throw new ValidationError('Select a valid delivery zone')
+  }
+  if (deliveryMethod === 'courier') {
+    if (!deliveryZoneId) {
+      throw new ValidationError('Select a delivery zone')
+    }
+  } else if (deliveryZoneId) {
+    throw new ValidationError('Shop pickup does not use a delivery zone')
+  }
   let customerAddress = rawAddress
   if (deliveryMethod === 'courier') {
     customerAddress = requiredText(rawAddress, 'Delivery address', 500)
@@ -168,6 +182,7 @@ export function parseOrderInput(value: unknown): OrderInput {
     delivery_method: deliveryMethod as OrderInput['delivery_method'],
     transaction_id: transactionId,
     payment_evidence: paymentEvidence,
+    delivery_zone_id: deliveryZoneId,
   }
 }
 

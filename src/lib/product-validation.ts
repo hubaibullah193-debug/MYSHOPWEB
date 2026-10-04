@@ -278,6 +278,24 @@ export function parseCategoryPayload(body: unknown): CategoryInput {
   }
 }
 
+export interface DeliveryZoneInput {
+  name: string
+  fee: number
+  isActive: boolean
+  displayOrder: number
+}
+
+export function parseDeliveryZonePayload(body: unknown): DeliveryZoneInput {
+  if (body === null || typeof body !== 'object') throw new ValidationError('Delivery zone details are required.')
+  const record = body as Partial<DeliveryZoneInput>
+  return {
+    name: parseRequiredText(record.name, 'Zone name', 100),
+    fee: parseMoney(record.fee, 'Delivery fee', false) as number,
+    isActive: parseActiveFlag(record.isActive, true),
+    displayOrder: parseDisplayOrder(record.displayOrder),
+  }
+}
+
 export function parseDisplayOrder(value: unknown): number {
   if (value === undefined || value === null || value === '') return 0
   const order = typeof value === 'number' ? value : Number(value)

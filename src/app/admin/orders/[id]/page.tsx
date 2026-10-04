@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { getOrderById, updateOrderStatus, assignDelivery } from '@/lib/orders'
+import { getOrderById, updateOrderStatus, assignDelivery, calculateOrderTotal, orderDeliveryFee, orderDeliveryZoneName } from '@/lib/orders'
 import type { Order } from '@/lib/orders'
 
 export default function AdminOrderDetailPage() {
@@ -179,11 +179,25 @@ export default function AdminOrderDetailPage() {
                 </div>
               ))}
             </div>
-            <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center">
-              <span className="font-semibold text-gray-900">Total</span>
-              <span className="text-xl font-bold text-primary">
-                PKR {order.total_amount.toLocaleString()}
-              </span>
+            <div className="mt-4 pt-4 border-t border-gray-200 space-y-1 text-sm">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Items</span>
+                <span className="text-gray-900 font-medium">
+                  PKR {calculateOrderTotal(order.items).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Delivery fee</span>
+                <span className="text-gray-900 font-medium">
+                  PKR {orderDeliveryFee(order).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between items-center border-t border-gray-200 pt-2">
+                <span className="font-semibold text-gray-900">Total</span>
+                <span className="text-xl font-bold text-primary">
+                  PKR {order.total_amount.toLocaleString()}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -306,6 +320,12 @@ export default function AdminOrderDetailPage() {
                   <p className="text-sm text-gray-600">Method</p>
                   <p className="text-gray-900 font-medium capitalize">{order.delivery_method}</p>
                 </div>
+                {orderDeliveryZoneName(order) && (
+                  <div>
+                    <p className="text-sm text-gray-600">Zone</p>
+                    <p className="text-gray-900 font-medium">{orderDeliveryZoneName(order)}</p>
+                  </div>
+                )}
                 <div>
                   <p className="text-sm text-gray-600">Date</p>
                   <p className="text-gray-900 font-medium">

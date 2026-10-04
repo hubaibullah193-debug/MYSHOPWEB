@@ -16,6 +16,8 @@ interface Order {
     quantity: number
   }>
   total_amount: number
+  delivery_fee?: number | string | null
+  delivery_zones?: { name: string } | { name: string }[] | null
   status: string
   payment_method: string
   payment_status: string
@@ -33,6 +35,12 @@ const statusLabels: Record<string, string> = {
   out_for_delivery: 'Out for delivery',
   delivered: 'Delivered',
   cancelled: 'Cancelled',
+}
+
+function zoneNameOf(order: Order): string | null {
+  const zone = order.delivery_zones
+  if (!zone) return null
+  return Array.isArray(zone) ? (zone[0]?.name ?? null) : zone.name
 }
 
 export default function OrderConfirmationPage() {
@@ -121,6 +129,11 @@ export default function OrderConfirmationPage() {
               <p>
                 <span className="font-medium text-gray-900">Address:</span> {order.customer_address || 'Shop pickup'}
               </p>
+              {order.delivery_method === 'courier' && zoneNameOf(order) && (
+                <p>
+                  <span className="font-medium text-gray-900">Delivery zone:</span> {zoneNameOf(order)}
+                </p>
+              )}
             </div>
 
             <div className="border-t border-gray-200 pt-4 space-y-3">
@@ -132,7 +145,11 @@ export default function OrderConfirmationPage() {
                   <span>PKR {(item.price * item.quantity).toLocaleString()}</span>
                 </div>
               ))}
-              <div className="flex justify-between border-t border-gray-200 pt-3 font-bold text-gray-900">
+              <div className="flex justify-between border-t border-gray-200 pt-3 text-sm text-gray-600">
+                <span>Delivery fee</span>
+                <span>PKR {Number(order.delivery_fee ?? 0).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between font-bold text-gray-900">
                 <span>Total</span>
                 <span>PKR {order.total_amount.toLocaleString()}</span>
               </div>

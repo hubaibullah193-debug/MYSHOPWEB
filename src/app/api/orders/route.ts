@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
         delivery_method: orderInput.delivery_method,
         transaction_id: orderInput.transaction_id ?? null,
         payment_evidence: orderInput.payment_evidence ?? null,
+        delivery_zone_id: orderInput.delivery_zone_id ?? null,
       }))
       .digest('hex')
     const requestUser = await getRequestUser(request)
@@ -66,10 +67,35 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    const totalAmount = Math.round(items.reduce((total, item) => total + item.price * item.quantity, 0) * 100) / 100
-    if (totalAmount <= 0) {
+    const itemsTotal = Math.round(items.reduce((total, item) => total + item.price * item.quantity, 0) * 100) / 100
+    if (itemsTotal <= 0) {
       throw new ValidationError('Order total must be greater than zero')
     }
+
+    let deliveryFee = 0
+    if (orderInput.delivery_method === 'courier') {
+      if (!orderInput.delivery_zone_id) {
+        throw new ValidationError('Select a delivery zone')
+      }
+      const { data: zone, error: zoneError } = await admin
+        .from('delivery_zones')
+        .select('id,fee')
+        .eq('id', orderInput.delivery_zone_id)
+        .eq('is_active', true)
+        .maybeSingle()
+      if (zoneError) {
+        console.error('Delivery zone lookup failed:', zoneError)
+        return errorResponse('Unable to verify delivery details', 503)
+      }
+      if (!zone) {
+        throw new ValidationError('Delivery zone is not available')
+      }
+      deliveryFee = Math.round(Number(zone.fee) * 100) / 100
+    } else if (orderInput.delivery_zone_id) {
+      throw new ValidationError('Shop pickup does not use a delivery zone')
+    }
+
+    const totalAmount = Math.round((itemsTotal + deliveryFee) * 100) / 100
 
     const { data: order, error: orderError } = await admin.rpc('create_order_with_payment', {
       p_customer_id: requestUser?.user.id ?? null,
@@ -85,6 +111,7 @@ export async function POST(request: NextRequest) {
        p_request_hash: requestHash,
        p_transaction_id: orderInput.transaction_id ?? null,
        p_payment_evidence: orderInput.payment_evidence ?? null,
+       p_delivery_zone_id: orderInput.delivery_zone_id ?? null,
     })
 
     if (orderError || !order) {

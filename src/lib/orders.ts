@@ -20,6 +20,9 @@ export interface Order {
   customer_address: string
   items: OrderItem[]
   total_amount: number
+  delivery_fee?: number | string | null
+  delivery_zone_id?: string | null
+  delivery_zones?: { name: string } | { name: string }[] | null
   status: OrderStatus
   payment_method: 'cod' | 'jazz_cash' | 'easypaisa'
   payment_status: 'pending' | 'paid' | 'failed' | 'refunded'
@@ -30,6 +33,19 @@ export interface Order {
   admin_notes?: string | null
   created_at: string
   updated_at: string
+}
+
+export function orderDeliveryFee(order: Order): number {
+  if (order.delivery_fee === null || order.delivery_fee === undefined || order.delivery_fee === '') return 0
+  const fee = Number(order.delivery_fee)
+  return Number.isFinite(fee) ? fee : 0
+}
+
+export function orderDeliveryZoneName(order: Order): string | null {
+  const zone = order.delivery_zones
+  if (!zone) return null
+  if (Array.isArray(zone)) return zone[0]?.name ?? null
+  return zone.name
 }
 
 export function calculateOrderTotal(items: Array<{ price: number; quantity: number }>): number {

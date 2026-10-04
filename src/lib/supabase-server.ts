@@ -59,6 +59,16 @@ export function getSupabaseAdmin(): SupabaseClient {
   })
 }
 
+/** Anonymous client for public reads (honours row-level security). */
+export function getSupabasePublicClient(): SupabaseClient {
+  return createClient(getSupabaseUrl(), getAnonKey(), {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  })
+}
+
 export function getSupabaseUserClient(accessToken: string): SupabaseClient {
   return createClient(getSupabaseUrl(), getAnonKey(), {
     auth: {
