@@ -62,6 +62,15 @@ export function parseAdminActive(value: unknown): boolean {
   return value
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+export function assertUuid(value: unknown, label = 'id'): string {
+  if (typeof value !== 'string' || !UUID_RE.test(value)) {
+    throw new ValidationError(`Invalid ${label}.`)
+  }
+  return value
+}
+
 export function parseResetMode(value: string): 'link' | 'temp' {
   if (value !== 'link' && value !== 'temp') {
     throw new ValidationError('Invalid reset mode.')

@@ -57,18 +57,24 @@ Each task is executed one at a time: implement → verify → commit → manual 
 
 **Blockers (live):** no Supabase env keys/SMTP → password-reset email delivery, hosted-GoTrue session-revocation-on-password-rotation, and create-account flows are implemented but not live-verified; Supabase's built-in auth rate limiting covers login brute force (edge rate limiting is not possible with client-side `signInWithPassword`).
 
-## T003 — Products, Categories & Inventory — **PARTIAL**
+## T003 — Products, Categories & Inventory — **PARTIAL (implementation PASS; live secrets still BLOCKED)**
 
-**Exists:**
-- Customer: product listing, filters (category, price), product detail, stock display, add-to-cart.
-- DB: `products`, `product_inventory` (per-product quantity), `inventory_logs`, `deduct_inventory`; atomic exactly-once deduction on `received → processing` inside `transition_order_status`.
-- No admin product/category/inventory management UI or APIs.
+**Implemented (2026-10-04):**
+- **Migration `004_catalog_inventory.sql`:** `categories` (self-parent FK, slug unique, active flag, display_order); `products` gains `category_id`/`subcategory_id`/`slug` (partial unique)/`is_active`/SEO fields/`sale_price` + sale window CHECK/`images` JSONB; `product_variants` (optional own price, active flag); `product_inventory.variant_id` with `UNIQUE(product_id, variant_id)` + partial unique (product-level only when `variant_id IS NULL`); `inventory_logs.variant_id`; STABLE `current_price(products)` (sale window logic) granted to `anon`/`authenticated`; `create_order_with_payment` now prices items from `current_price`; `transition_order_status` does a sum-based stock-sufficiency pre-pass then FIFO variant deduction (both rewritten, signatures unchanged).
+- **Catalogue admin (spec §6.1, §6.3, §6.7):** admin product list/create/edit (`ProductForm` — name, price, category/subcategory, availability, sale price + scheduled window, SEO, up to 12 ordered images with secure upload/delete, variant editor), category tree CRUD (re-parenting guard: parent disabled once it has children; slug uniqueness errors surfaced), inventory screen (per-variant/ product-level stock, low/out badges, adjustment dialog with mandatory reason + audit trail).
+- **Catalog APIs (server-side business rules):** SECURITY DEFINER admin RPCs (`admin_create_product`, `admin_update_product`, `admin_delete_product`, `admin_adjust_inventory`, `_catalog_admin_check`) via service-role, REVOKEd from PUBLIC/GRANTed to service_role; RLS admin policies are defense-in-depth; rate-limited product/upload endpoints; product_created/deleted and inventory_adjusted activity logs.
+- **Validation (`src/lib/product-validation.ts`, pure):** price > 0, max price 99,999,999, max qty 1,000,000, ≤12 images (http(s), unique), ≤50 variants, sale-window rules (both dates required if set, end > start), inventory adjust requires non-zero whole-number delta + reason; `effectivePrice`/`isOnSale` render mirrors of DB `current_price`. 28 unit tests pass.
+- **Shop read-side:** product cards + detail show effective (sale) price, SALE badge/strike-through, availability across variants, variant name/price/per-variant stock readout, multi-image thumbnails; `ProductFilters` now uses the `categories` tree (id-based) and price ranges filter on `current_price`; shop queries filter `is_active = true`. Variant-aware cart/checkout is intentionally deferred (T004).
 
-**Remaining (admin side):**
-- Product CRUD, multiple images (secure product-image storage bucket + optimization), availability status, SEO fields (spec §6.1).
-- Variants with independent stock + variant pricing/discounts; scheduled discounts (spec §6.3).
-- Subcategories + hierarchy management (spec §6.7).
-- Inventory admin UI: manual adjustment, logs view, low-stock/out-of-stock indicators/notifications.
+**Verified:** `tsc --noEmit` clean; jest 6 suites / 85 tests pass (+ 10 integration tests skip without creds); `next lint` clean (1 pre-existing ProductFilters exhaustive-deps warning); clean `next build` PASS (49 static + dynamic routes) with only the known i18n block warning.
+
+**Blockers (live):** no Supabase env keys → migration 004, admin RPCs, `current_price`, storage bucket and RLS never applied to a real project; `verify_phase1.sql` extended with 004 checks but not run; image upload/delete and variant stock flows are static-verified only.
+
+**Remaining (deferred/other):**
+- Variant-aware cart + checkout (choose a variant, price its sale), deferred to T004.
+- Category tree filters on the shop (`getCategories` returns top-level only today); `product_count` embeds.
+- API-layer inventory log view; low-stock notifications; per-product image-optimization sizing.
+- Legacy `/api/orders` flow still references migration-003 privilege layout (out of scope here; T004 work addresses it).
 
 ## T004 — Shopping, Checkout & Order Management — **PARTIAL**
 

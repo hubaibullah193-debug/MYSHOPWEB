@@ -71,10 +71,10 @@ export default function ProductDetailPage() {
       {/* Product Image */}
       <div>
         <div className="bg-gray-200 rounded-lg overflow-hidden">
-          {product.image_url ? (
+          {(product.image_url || (product.images && product.images[0])) ? (
             <div className="relative w-full h-96">
               <Image
-                src={product.image_url}
+                src={product.image_url || (product.images as string[])[0]}
                 alt={product.name}
                 fill
                 className="object-cover"
@@ -86,6 +86,16 @@ export default function ProductDetailPage() {
             </div>
           )}
         </div>
+        {product.images && product.images.length > 1 && (
+          <div className="mt-3 flex gap-3">
+            {product.images.map((image) => (
+              <div key={image} className="h-20 w-20 overflow-hidden rounded-md border border-gray-200">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={image} alt="" className="h-full w-full object-cover" />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Product Details */}
@@ -100,11 +110,52 @@ export default function ProductDetailPage() {
 
         {/* Price */}
         <div className="border-t border-b border-gray-200 py-6">
-          <div className="text-4xl font-bold text-primary mb-2">
-            PKR {product.price.toLocaleString()}
-          </div>
+          {product.is_on_sale ? (
+            <>
+              <div className="flex items-baseline gap-3">
+                <span className="text-4xl font-bold text-primary">
+                  PKR {product.current_price.toLocaleString()}
+                </span>
+                <span className="text-xl text-gray-400 line-through">
+                  PKR {product.price.toLocaleString()}
+                </span>
+              </div>
+              <span className="mt-2 inline-block rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-800">
+                SALE
+              </span>
+            </>
+          ) : (
+            <div className="text-4xl font-bold text-primary mb-2">
+              PKR {product.current_price.toLocaleString()}
+            </div>
+          )}
           <p className="text-sm text-gray-600">Price in Pakistani Rupees</p>
         </div>
+
+        {/* Variants readout */}
+        {product.variants.length > 0 && (
+          <div className="rounded-lg bg-gray-50 p-4">
+            <p className="text-sm text-gray-600 mb-2">Options available</p>
+            <ul className="space-y-2">
+              {product.variants.map((variant) => {
+                const variantPrice = variant.price ?? product.current_price
+                const available = variant.quantity > 0
+                return (
+                  <li key={variant.id} className="flex items-center justify-between">
+                    <span className={`text-sm font-medium ${variant.is_active ? 'text-gray-900' : 'text-gray-400'}`}>
+                      {variant.name}
+                      {!variant.is_active && ' (unavailable)'}
+                    </span>
+                    <span className="text-sm text-gray-600">
+                      PKR {variantPrice.toLocaleString()}
+                      {available ? ` · ${variant.quantity} in stock` : ' · out of stock'}
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        )}
 
         {/* Stock Status */}
         <div className="bg-gray-50 p-4 rounded-lg">
@@ -170,8 +221,8 @@ export default function ProductDetailPage() {
                     {
                       product_id: product.id,
                       product_name: product.name,
-                      price: product.price,
-                      image_url: product.image_url,
+                      price: product.current_price,
+                      image_url: product.image_url || (product.images && product.images[0]) || undefined,
                     },
                     quantity
                   )

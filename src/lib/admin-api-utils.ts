@@ -3,6 +3,8 @@ import type { NextRequest } from 'next/server'
 import { ValidationError } from '@/lib/admin-validation'
 import { ServerAuthError } from '@/lib/supabase-server'
 
+export { assertUuid } from '@/lib/admin-validation'
+
 export function handleRouteError(err: unknown): NextResponse {
   if (err instanceof ServerAuthError) {
     return NextResponse.json(
@@ -45,11 +47,28 @@ export function requestOrigin(request: NextRequest): string {
   return `${proto}://${host}`
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const SAFE_RPC_MESSAGES = new Set([
+  'Admin access required',
+  'Invalid product name',
+  'Invalid product price',
+  'Invalid sale price',
+  'Invalid category',
+  'Invalid subcategory',
+  'Category and subcategory do not match',
+  'Product not found',
+  'Invalid variant name',
+  'Invalid variant price',
+  'Invalid variant stock',
+  'Invalid variant reference',
+  'Invalid variant',
+  'Transfer the base stock to a variant before adding variants',
+  'This product uses variants — adjust a specific variant instead',
+  'Insufficient existing stock',
+  'A reason is required',
+])
 
-export function assertUuid(value: unknown, label = 'id'): string {
-  if (typeof value !== 'string' || !UUID_RE.test(value)) {
-    throw new ValidationError(`Invalid ${label}.`)
-  }
-  return value
+/** Maps a surfaced Supabase RPC error to a safe client-facing message. */
+export function rpcMessage(error: { message?: string } | null | undefined, fallback: string): string {
+  const message = error?.message
+  return message && SAFE_RPC_MESSAGES.has(message) ? message : fallback
 }

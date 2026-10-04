@@ -4,13 +4,15 @@
 -- Phase 1 database-foundation verification for Hubaib One Stop Shop.
 --
 -- Verifies, against a real Supabase (PostgreSQL 14+) project, that migrations
--- 001 -> 002 -> 003 produced the expected production foundation:
+-- 001 -> 002 -> 003 -> 004 produced the expected production foundation:
 --   * tables, columns, check constraints, RLS policies
 --   * enforcement RPCs (create_order_with_payment, transition_order_status,
 --     verify_payment, assign_order_delivery, deduct_inventory) with the correct
 --     signature and privilege model (service_role only)
 --   * role helper functions, audit triggers, indexes
 --   * private `payment-evidence` storage bucket
+--   * migration 004 catalogue: categories, product_variants, sale pricing
+--     (current_price), admin product/inventory RPCs, product-images bucket
 --
 -- Safe to run repeatedly. Read-only (no data mutations); intended for the
 -- Supabase test runner (files in supabase/tests/ are wrapped in a transaction)
@@ -48,7 +50,8 @@ BEGIN
   FOREACH tbl IN ARRAY ARRAY[
     'users', 'products', 'product_inventory', 'inventory_logs', 'orders',
     'payments', 'order_requests', 'activity_logs', 'order_idempotency_keys',
-    'reviews', 'business_settings', 'customer_notes', 'admin_sessions'
+    'reviews', 'business_settings', 'customer_notes', 'admin_sessions',
+    'categories', 'product_variants'
   ] LOOP
     IF NOT EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = tbl) THEN
       RAISE EXCEPTION 'FAILED: table public.% exists', tbl;
@@ -61,7 +64,8 @@ BEGIN
   FOREACH tbl IN ARRAY ARRAY[
     'users', 'products', 'product_inventory', 'inventory_logs', 'orders',
     'payments', 'order_requests', 'activity_logs', 'order_idempotency_keys',
-    'reviews', 'business_settings', 'customer_notes', 'admin_sessions'
+    'reviews', 'business_settings', 'customer_notes', 'admin_sessions',
+    'categories', 'product_variants'
   ] LOOP
     IF NOT EXISTS (
       SELECT 1
@@ -385,6 +389,157 @@ BEGIN
     RAISE EXCEPTION 'FAILED: private storage bucket payment-evidence exists';
   END IF;
 
-  RAISE NOTICE 'verify_phase1.sql: all checks passed';
+  RAISE NOTICE 'verify_phase1.sql: all checks passed (incl. migration 004)';
+END;
+$verify$;
+
+-- =============================================================================
+-- Migration 004 catalogue checks: categories, variants, sale pricing, admin RPCs
+-- =============================================================================
+DO $verify$
+DECLARE
+  f_create    oid;
+  f_update    oid;
+  f_delete    oid;
+  f_adjust    oid;
+  f_price     oid;
+  status_ok   BOOLEAN;
+  col         TEXT;
+BEGIN
+  -- ---------------------------------------------------------------------------
+  -- Product catalogue columns (004)
+  -- ---------------------------------------------------------------------------
+  FOREACH col IN ARRAY ARRAY[
+    'category_id', 'subcategory_id', 'subcategory', 'is_active', 'slug',
+    'seo_title', 'seo_description', 'sale_price', 'sale_starts_at',
+    'sale_ends_at', 'images'
+  ] LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'products' AND column_name = col
+    ) THEN
+      RAISE EXCEPTION 'FAILED: products.% column exists (migration 004)', col;
+    END IF;
+  END LOOP;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'product_inventory' AND column_name = 'variant_id'
+  ) THEN
+    RAISE EXCEPTION 'FAILED: product_inventory.variant_id column exists';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'inventory_logs' AND column_name = 'variant_id'
+  ) THEN
+    RAISE EXCEPTION 'FAILED: inventory_logs.variant_id column exists';
+  END IF;
+
+  -- ---------------------------------------------------------------------------
+  -- Inventory mode constraints: at most one product-level row per product
+  -- ---------------------------------------------------------------------------
+  SELECT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE schemaname = 'public' AND indexname = 'product_inventory_product_only_unique'
+      AND indexdef LIKE '%variant_id IS NULL%'
+  ) INTO status_ok;
+  IF NOT status_ok THEN
+    RAISE EXCEPTION 'FAILED: partial unique index (one product-level inventory row)';
+  END IF;
+
+  SELECT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE schemaname = 'public' AND indexname = 'products_slug_unique'
+      AND indexdef LIKE '%slug%' AND indexdef LIKE '%WHERE slug IS NOT NULL%'
+  ) INTO status_ok;
+  IF NOT status_ok THEN
+    RAISE EXCEPTION 'FAILED: products_slug_unique partial unique index';
+  END IF;
+
+  -- ---------------------------------------------------------------------------
+  -- current_price() STABLE helper callable by anon/authenticated
+  -- ---------------------------------------------------------------------------
+  SELECT p.oid INTO f_price
+  FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public' AND p.proname = 'current_price' AND p.pronargs = 1
+  LIMIT 1;
+  IF f_price IS NULL THEN
+    RAISE EXCEPTION 'FAILED: current_price(products) exists';
+  END IF;
+  IF NOT has_function_privilege('anon', f_price, 'EXECUTE')
+     OR NOT has_function_privilege('authenticated', f_price, 'EXECUTE') THEN
+    RAISE EXCEPTION 'FAILED: current_price callable by anon + authenticated';
+  END IF;
+
+  -- ---------------------------------------------------------------------------
+  -- Admin catalogue RPCs: exact signatures, service_role only
+  -- ---------------------------------------------------------------------------
+  SELECT p.oid INTO f_create
+  FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public' AND p.proname = 'admin_create_product'
+    AND pg_get_function_identity_arguments(p.oid) = 'uuid, jsonb, jsonb'
+  LIMIT 1;
+  IF f_create IS NULL THEN
+    RAISE EXCEPTION 'FAILED: admin_create_product(uuid, jsonb, jsonb) exists';
+  END IF;
+  IF NOT has_function_privilege('service_role', f_create, 'EXECUTE') THEN
+    RAISE EXCEPTION 'FAILED: service_role can EXECUTE admin_create_product';
+  END IF;
+  IF has_function_privilege('anon', f_create, 'EXECUTE')
+     OR has_function_privilege('authenticated', f_create, 'EXECUTE') THEN
+    RAISE EXCEPTION 'FAILED: admin_create_product not executable by anon/authenticated';
+  END IF;
+
+  SELECT p.oid INTO f_update
+  FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public' AND p.proname = 'admin_update_product'
+    AND pg_get_function_identity_arguments(p.oid) = 'uuid, uuid, jsonb, jsonb'
+  LIMIT 1;
+  IF f_update IS NULL THEN
+    RAISE EXCEPTION 'FAILED: admin_update_product(uuid, uuid, jsonb, jsonb) exists';
+  END IF;
+  IF NOT has_function_privilege('service_role', f_update, 'EXECUTE')
+     OR has_function_privilege('anon', f_update, 'EXECUTE')
+     OR has_function_privilege('authenticated', f_update, 'EXECUTE') THEN
+    RAISE EXCEPTION 'FAILED: admin_update_product privilege model (service_role only)';
+  END IF;
+
+  SELECT p.oid INTO f_delete
+  FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public' AND p.proname = 'admin_delete_product'
+    AND pg_get_function_identity_arguments(p.oid) = 'uuid, uuid'
+  LIMIT 1;
+  IF f_delete IS NULL THEN
+    RAISE EXCEPTION 'FAILED: admin_delete_product(uuid, uuid) exists';
+  END IF;
+  IF NOT has_function_privilege('service_role', f_delete, 'EXECUTE')
+     OR has_function_privilege('authenticated', f_delete, 'EXECUTE') THEN
+    RAISE EXCEPTION 'FAILED: admin_delete_product privilege model (service_role only)';
+  END IF;
+
+  SELECT p.oid INTO f_adjust
+  FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public' AND p.proname = 'admin_adjust_inventory'
+    AND pg_get_function_identity_arguments(p.oid) = 'uuid, uuid, uuid, integer, text'
+  LIMIT 1;
+  IF f_adjust IS NULL THEN
+    RAISE EXCEPTION 'FAILED: admin_adjust_inventory(uuid, uuid, uuid, int, text) exists';
+  END IF;
+  IF NOT has_function_privilege('service_role', f_adjust, 'EXECUTE')
+     OR has_function_privilege('authenticated', f_adjust, 'EXECUTE') THEN
+    RAISE EXCEPTION 'FAILED: admin_adjust_inventory privilege model (service_role only)';
+  END IF;
+
+  -- ---------------------------------------------------------------------------
+  -- Storage: public product-images bucket
+  -- ---------------------------------------------------------------------------
+  IF NOT EXISTS (
+    SELECT 1 FROM storage.buckets WHERE id = 'product-images' AND public = TRUE
+  ) THEN
+    RAISE EXCEPTION 'FAILED: public storage bucket product-images exists';
+  END IF;
+
+  RAISE NOTICE 'verify_phase1.sql: migration 004 catalogue checks passed';
 END;
 $verify$;

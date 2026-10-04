@@ -177,7 +177,7 @@ export default function OrderConfirmationPage() {
           <ul className="text-sm text-blue-800 space-y-1">
             <li>✓ Your order has been created with ID: {order.id.slice(0, 8)}</li>
             <li>⏳ Admin will verify your payment shortly</li>
-            <li>📦 Once confirmed, you'll receive shipping details</li>
+            <li>📦 Once confirmed, you&apos;ll receive shipping details</li>
             <li>📧 Check your email for order updates</li>
           </ul>
         </div>

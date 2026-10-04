@@ -14,7 +14,7 @@ interface ProductFiltersProps {
 
 export default function ProductFilters({ onFilterChange }: ProductFiltersProps) {
   const { t } = useTranslation()
-  const [categories, setCategories] = useState<string[]>([])
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [minPrice, setMinPrice] = useState<string>('')
   const [maxPrice, setMaxPrice] = useState<string>('')
@@ -22,8 +22,7 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const cats = await getCategories()
-        setCategories(cats as string[])
+        setCategories(await getCategories())
       } catch (error) {
         console.error('Failed to fetch categories:', error)
       }
@@ -58,9 +57,9 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
         >
           <option value="">All Categories</option>
-          {categories.map((cat) => (
-            <option key={cat} value={cat}>
-              {cat}
+          {categories.map((category) => (
+            <option key={category.id} value={category.id}>
+              {category.name}
             </option>
           ))}
         </select>
