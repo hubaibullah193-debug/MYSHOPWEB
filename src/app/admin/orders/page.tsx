@@ -38,9 +38,10 @@ export default function AdminOrdersPage() {
   const statuses = [
     { value: '', label: 'All Orders' },
     { value: 'pending_payment', label: 'Pending Payment' },
-    { value: 'confirmed', label: 'Confirmed' },
+    { value: 'received', label: 'Received' },
     { value: 'processing', label: 'Processing' },
-    { value: 'shipped', label: 'Shipped' },
+    { value: 'ready', label: 'Ready' },
+    { value: 'out_for_delivery', label: 'Out for Delivery' },
     { value: 'delivered', label: 'Delivered' },
     { value: 'cancelled', label: 'Cancelled' },
   ]
@@ -56,9 +57,10 @@ export default function AdminOrdersPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
           { key: 'pending_payment', label: 'Pending Payment', color: 'bg-yellow-50 border-yellow-200' },
-          { key: 'confirmed', label: 'Confirmed', color: 'bg-blue-50 border-blue-200' },
+          { key: 'received', label: 'Received', color: 'bg-blue-50 border-blue-200' },
           { key: 'processing', label: 'Processing', color: 'bg-purple-50 border-purple-200' },
-          { key: 'shipped', label: 'Shipped', color: 'bg-green-50 border-green-200' },
+          { key: 'ready', label: 'Ready', color: 'bg-indigo-50 border-indigo-200' },
+          { key: 'out_for_delivery', label: 'Out for Delivery', color: 'bg-green-50 border-green-200' },
         ].map((stat) => (
           <div key={stat.key} className={`${stat.color} border rounded-lg p-4`}>
             <p className="text-sm font-medium text-gray-700">{stat.label}</p>
@@ -129,19 +131,19 @@ export default function AdminOrdersPage() {
                   </td>
                   <td className="px-6 py-4 text-sm">
                     <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        order.status === 'pending_payment'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : order.status === 'confirmed'
-                            ? 'bg-blue-100 text-blue-800'
-                            : order.status === 'processing'
-                              ? 'bg-purple-100 text-purple-800'
-                              : order.status === 'shipped'
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${order.status === 'pending_payment'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : order.status === 'received'
+                          ? 'bg-blue-100 text-blue-800'
+                          : order.status === 'processing'
+                            ? 'bg-purple-100 text-purple-800'
+                            : order.status === 'ready'
+                              ? 'bg-indigo-100 text-indigo-800'
+                              : order.status === 'out_for_delivery'
                                 ? 'bg-green-100 text-green-800'
                                 : order.status === 'delivered'
                                   ? 'bg-green-100 text-green-800'
-                                  : 'bg-red-100 text-red-800'
-                      }`}
+                                  : 'bg-red-100 text-red-800'}`}
                     >
                       {order.status}
                     </span>
@@ -149,7 +151,7 @@ export default function AdminOrdersPage() {
                   <td className="px-6 py-4 text-sm">
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        order.payment_status === 'confirmed'
+                        order.payment_status === 'paid'
                           ? 'bg-green-100 text-green-800'
                           : order.payment_status === 'failed'
                             ? 'bg-red-100 text-red-800'

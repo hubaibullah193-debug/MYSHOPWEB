@@ -1,13 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
+import { useParams } from 'next/navigation'
 
 interface Order {
   id: string
-  customer_email: string
+  customer_name: string
   customer_phone: string
   customer_address: string
   items: Array<{
@@ -20,70 +19,60 @@ interface Order {
   status: string
   payment_method: string
   payment_status: string
+  delivery_method?: string
+  delivery_date?: string | null
+  delivery_time_slot?: string | null
   created_at: string
+}
+
+const statusLabels: Record<string, string> = {
+  pending_payment: 'Pending payment',
+  received: 'Order received',
+  processing: 'Processing',
+  ready: 'Ready',
+  out_for_delivery: 'Out for delivery',
+  delivered: 'Delivered',
+  cancelled: 'Cancelled',
 }
 
 export default function OrderConfirmationPage() {
   const params = useParams()
-  const router = useRouter()
   const orderId = params.id as string
-
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    const phone = sessionStorage.getItem('hubaib_last_order_phone')
+    if (!phone || !orderId) {
+      setLoading(false)
+      return
+    }
+
     const fetchOrder = async () => {
       try {
-        setLoading(true)
-        setError(null)
-
-        const { data, error: queryError } = await supabase
-          .from('orders')
-          .select('*')
-          .eq('id', orderId)
-          .single()
-
-        if (queryError || !data) {
-          throw new Error('Order not found')
+        const response = await fetch('/api/orders/track', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order_id: orderId, phone }),
+        })
+        const payload = await response.json()
+        if (!response.ok) {
+          throw new Error(payload.error || 'Unable to load order')
         }
-
-        setOrder(data)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load order')
+        setOrder(payload.order)
+      } catch (fetchError) {
+        setError(fetchError instanceof Error ? fetchError.message : 'Unable to load order')
       } finally {
         setLoading(false)
       }
     }
 
-    if (orderId) {
-      fetchOrder()
-    }
+    fetchOrder()
   }, [orderId])
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <p className="mt-4 text-gray-600">Loading order...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error || !order) {
-    return (
-      <div className="bg-white rounded-lg shadow p-12 text-center">
-        <p className="text-red-600 text-lg font-medium mb-4">{error || 'Order not found'}</p>
-        <Link
-          href="/shop/products"
-          className="inline-block px-6 py-2 bg-primary hover:bg-indigo-700 rounded text-white font-medium"
-        >
-          Back to Shop
-        </Link>
-      </div>
-    )
+    return <p className="text-gray-600">Loading order...</p>
   }
 
   const paymentMethodLabel: Record<string, string> = {
@@ -93,110 +82,91 @@ export default function OrderConfirmationPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {/* Success Message */}
-      <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-8 text-center">
-        <div className="text-4xl mb-2">✓</div>
-        <h1 className="text-2xl font-bold text-green-900 mb-2">Order Placed Successfully!</h1>
-        <p className="text-green-800">Your order is pending payment confirmation</p>
+    <div className="max-w-2xl mx-auto space-y-6">
+      <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+        <h1 className="text-2xl font-bold text-green-900 mb-2">Order placed successfully</h1>
+        <p className="text-green-800">Order ID: {orderId.slice(0, 8)}</p>
       </div>
 
-      {/* Order Details */}
-      <div className="bg-white rounded-lg shadow p-8 space-y-8">
-        {/* Order ID and Status */}
-        <div className="border-b border-gray-200 pb-6">
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Order ID</p>
-              <p className="text-lg font-mono font-semibold text-gray-900">{order.id.slice(0, 8)}</p>
+      {error && (
+        <div className="rounded-md bg-yellow-50 p-4">
+          <p className="text-sm text-yellow-800">{error}</p>
+          <Link href="/shop/track" className="inline-block mt-2 text-sm font-medium text-primary hover:underline">
+            Track with your WhatsApp number instead
+          </Link>
+        </div>
+      )}
+
+      {order ? (
+        <>
+          <div className="bg-white rounded-lg shadow p-8 space-y-6">
+            <div className="grid grid-cols-2 gap-6 border-b border-gray-200 pb-6">
+              <div>
+                <p className="text-sm text-gray-600">Order status</p>
+                <p className="text-lg font-semibold text-gray-900">{statusLabels[order.status] || order.status}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Payment</p>
+                <p className="text-lg font-semibold text-gray-900 capitalize">{order.payment_status}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Order Status</p>
-              <p className="text-lg font-semibold text-yellow-600 capitalize">{order.status}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Payment Status</p>
-              <p className="text-lg font-semibold text-orange-600 capitalize">{order.payment_status}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Payment Method</p>
-              <p className="text-lg font-semibold text-gray-900">
-                {paymentMethodLabel[order.payment_method] || order.payment_method}
+
+            <div className="space-y-2 text-sm text-gray-700">
+              <p>
+                <span className="font-medium text-gray-900">Name:</span> {order.customer_name}
+              </p>
+              <p>
+                <span className="font-medium text-gray-900">Phone:</span> {order.customer_phone}
+              </p>
+              <p>
+                <span className="font-medium text-gray-900">Address:</span> {order.customer_address || 'Shop pickup'}
               </p>
             </div>
-          </div>
-        </div>
 
-        {/* Delivery Information */}
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Delivery Information</h2>
-          <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-            <p className="text-gray-600">
-              <span className="font-medium">Name:</span> (Will be assigned by admin)
-            </p>
-            <p className="text-gray-600">
-              <span className="font-medium">Phone:</span> {order.customer_phone}
-            </p>
-            <p className="text-gray-600">
-              <span className="font-medium">Email:</span> {order.customer_email}
-            </p>
-            <p className="text-gray-600">
-              <span className="font-medium">Address:</span> {order.customer_address}
-            </p>
-          </div>
-        </div>
-
-        {/* Order Items */}
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Order Items</h2>
-          <div className="space-y-3">
-            {(order.items as Array<any>).map((item, idx) => (
-              <div key={idx} className="flex justify-between text-gray-600 py-2 border-b border-gray-100">
-                <span>
-                  {item.product_name} x {item.quantity}
-                </span>
-                <span className="font-medium">PKR {(item.price * item.quantity).toLocaleString()}</span>
+            <div className="border-t border-gray-200 pt-4 space-y-3">
+              {order.items.map((item) => (
+                <div key={item.product_id} className="flex justify-between text-sm text-gray-700">
+                  <span>
+                    {item.product_name} x {item.quantity}
+                  </span>
+                  <span>PKR {(item.price * item.quantity).toLocaleString()}</span>
+                </div>
+              ))}
+              <div className="flex justify-between border-t border-gray-200 pt-3 font-bold text-gray-900">
+                <span>Total</span>
+                <span>PKR {order.total_amount.toLocaleString()}</span>
               </div>
-            ))}
+            </div>
           </div>
-        </div>
 
-        {/* Order Total */}
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <div className="flex justify-between items-center">
-            <span className="text-lg font-semibold text-gray-900">Total Amount</span>
-            <span className="text-2xl font-bold text-primary">
-              PKR {order.total_amount.toLocaleString()}
-            </span>
-          </div>
-        </div>
-
-        {/* Next Steps */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="font-semibold text-blue-900 mb-2">Next Steps</h3>
-          <ul className="text-sm text-blue-800 space-y-1">
-            <li>✓ Your order has been created with ID: {order.id.slice(0, 8)}</li>
-            <li>⏳ Admin will verify your payment shortly</li>
-            <li>📦 Once confirmed, you&apos;ll receive shipping details</li>
-            <li>📧 Check your email for order updates</li>
-          </ul>
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-4 pt-4">
-          <Link
-            href="/shop/products"
-            className="flex-1 px-6 py-3 bg-gray-200 hover:bg-gray-300 rounded-lg text-gray-900 font-medium text-center transition"
-          >
-            Continue Shopping
+          {order.payment_method !== 'cod' && order.payment_status === 'pending' && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-5">
+              <h2 className="font-semibold text-blue-900 mb-1">
+                {paymentMethodLabel[order.payment_method] || order.payment_method} payment being verified
+              </h2>
+              <p className="text-sm text-blue-800">
+                Your screenshot and transaction reference are being checked. The shop will WhatsApp you
+                once your payment is confirmed and the order is being processed.
+              </p>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="bg-white rounded-lg shadow p-8 text-center">
+          <p className="text-gray-600 mb-4">Use the tracking form to view this order securely.</p>
+          <Link href="/shop/track" className="inline-block px-5 py-2 bg-primary text-white rounded">
+            Track order
           </Link>
-          <button
-            onClick={() => router.push('/shop/products')}
-            className="flex-1 px-6 py-3 bg-primary hover:bg-indigo-700 rounded-lg text-white font-medium transition"
-          >
-            Back to Home
-          </button>
         </div>
+      )}
+
+      <div className="flex gap-4">
+        <Link href="/shop/products" className="flex-1 text-center px-5 py-3 bg-gray-200 rounded-lg text-gray-900 font-medium">
+          Continue shopping
+        </Link>
+        <Link href="/shop/track" className="flex-1 text-center px-5 py-3 bg-primary rounded-lg text-white font-medium">
+          Track another order
+        </Link>
       </div>
     </div>
   )

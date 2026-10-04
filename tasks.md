@@ -76,15 +76,25 @@ Each task is executed one at a time: implement → verify → commit → manual 
 - API-layer inventory log view; low-stock notifications; per-product image-optimization sizing.
 - Legacy `/api/orders` flow still references migration-003 privilege layout (out of scope here; T004 work addresses it).
 
-## T004 — Shopping, Checkout & Order Management — **PARTIAL**
+## T004 — Shopping, Checkout & Order Management — **STATIC PASS / LIVE BLOCKED**
 
 **Exists:**
 - Browsing, filters, product detail, cart (persistent localStorage, quantity, remove), guest checkout (name/email/WhatsApp/address/delivery method), server-side price/total recomputation, idempotency + request hash, order creation, order ID, item snapshots, lifecycle (`pending_payment → received → processing → ready → out_for_delivery → delivered`, terminal `cancelled`), tracking (order ID + WhatsApp), cancellation rules server-enforced.
+- `src/lib/validation.ts` (+ tests): shared order/tracking/notes/delivery parsers, `normalizePhone`, idempotency key checks.
+- `/api/orders` rewrite (`create_order_with_payment` RPC + validation + rate limit), secure guest tracking via `/api/orders/track` (order ID + normalized phone), new `/shop/track` page, order-confirmation page loads securely via session-stored phone (no public order data leak) + JazzCash/Easypaisa verification note.
+- Admin orders moved off the browser Supabase client to server APIs: `/api/admin/orders`, `[id]`, `[id]/status`, `[id]/delivery` (all `requireAdmin` + validation + rate-limited); `src/lib/orders.ts` now uses `apiFetch`. Status options aligned to lifecycle; `payment_status` uses `paid` (not `confirmed`).
+- Shop layout is guest-only header (track, cart count, staff login); `CartProvider` mounted at root (`useCart` previously threw outside checkout/cart); cart `itemCount` sums quantities; ProductFilters dependency fix (clears the last lint warning).
+- Extracted from stash: mixed with T006/T009 WIP (admin payments/activity API refactor, nullable Supabase client, i18n-block removal, auth guard) — left uncommitted.
+
+**Verified (static):**
+- `tsc --noEmit` clean; `next lint` clean (warning fixed); jest 7/8 suites, 98 pass, 10 skip; clean `next build` pass.
 
 **Remaining:**
 - Search + autocomplete (spec §6.5); availability/variant filters.
+- Variant-aware cart + checkout (choose a variant, price its sale).
 - Delivery fee in totals once zones exist (T005).
-- Order review step polish, confirmation details (payment instructions for JazzCash/Easypaisa).
+- Order review step polish; payment instructions rendering from admin-sourced details.
+- Live verification blocked: no Supabase env keys; migration 004 + `verify_phase1.sql` not applied.
 
 ## T005 — Delivery Zones & Shop Pickup — **MISSING**
 

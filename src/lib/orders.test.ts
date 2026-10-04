@@ -42,16 +42,16 @@ describe('Orders Utilities', () => {
       expect(getOrderStatusBadgeColor('pending_payment')).toBe('bg-yellow-100 text-yellow-800')
     })
 
-    it('should return correct color for confirmed status', () => {
-      expect(getOrderStatusBadgeColor('confirmed')).toBe('bg-blue-100 text-blue-800')
+    it('should return correct color for received status', () => {
+      expect(getOrderStatusBadgeColor('received')).toBe('bg-blue-100 text-blue-800')
     })
 
     it('should return correct color for processing status', () => {
       expect(getOrderStatusBadgeColor('processing')).toBe('bg-purple-100 text-purple-800')
     })
 
-    it('should return correct color for shipped status', () => {
-      expect(getOrderStatusBadgeColor('shipped')).toBe('bg-indigo-100 text-indigo-800')
+    it('should return correct color for out for delivery status', () => {
+      expect(getOrderStatusBadgeColor('out_for_delivery')).toBe('bg-green-100 text-green-800')
     })
 
     it('should return correct color for delivered status', () => {
@@ -59,7 +59,7 @@ describe('Orders Utilities', () => {
     })
 
     it('should return default color for unknown status', () => {
-      expect(getOrderStatusBadgeColor('unknown' as any)).toBe('bg-gray-100 text-gray-800')
+      expect(getOrderStatusBadgeColor('unknown')).toBe('bg-gray-100 text-gray-800')
     })
   })
 })

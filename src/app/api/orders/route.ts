@@ -1,125 +1,118 @@
+import { createHash } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { getRequestUser, getSupabaseAdmin, ServerAuthError } from '@/lib/supabase-server'
+import { parseIdempotencyKey, parseOrderInput, ValidationError } from '@/lib/validation'
+import { enforceRateLimit, requestAddress } from '@/lib/rate-limit'
 
-interface OrderRequest {
-  customer_email: string
-  customer_phone: string
-  customer_address: string
-  items: Array<{
-    product_id: string
-    product_name: string
-    price: number
-    quantity: number
-  }>
-  total_amount: number
-  payment_method: 'cod' | 'jazz_cash' | 'easypaisa'
+export const dynamic = 'force-dynamic'
+
+interface ProductSnapshot {
+  id: string
+  name: string
+  price: number
+  image_url?: string | null
 }
 
-/**
- * POST /api/orders
- * Create a new order with pending_payment status
- * Real-time inventory deduction for website orders
- */
+function errorResponse(message: string, status: number) {
+  return NextResponse.json({ error: message }, { status })
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const body: OrderRequest = await request.json()
+    enforceRateLimit(`orders:${requestAddress(request)}`, 10, 60 * 60 * 1000)
 
-    // Validate input
-    if (
-      !body.customer_email ||
-      !body.customer_phone ||
-      !body.customer_address ||
-      !body.items ||
-      body.items.length === 0
-    ) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      )
+    const body = await request.json()
+    const orderInput = parseOrderInput(body)
+    const idempotencyKey = parseIdempotencyKey(request.headers.get('idempotency-key'))
+    const requestHash = createHash('sha256')
+      .update(JSON.stringify({
+        customer_name: orderInput.customer_name,
+        customer_email: orderInput.customer_email,
+        customer_phone: orderInput.customer_phone,
+        customer_address: orderInput.customer_address,
+        items: [...orderInput.items].sort((left, right) => left.product_id.localeCompare(right.product_id)),
+        payment_method: orderInput.payment_method,
+        delivery_method: orderInput.delivery_method,
+        transaction_id: orderInput.transaction_id ?? null,
+        payment_evidence: orderInput.payment_evidence ?? null,
+      }))
+      .digest('hex')
+    const requestUser = await getRequestUser(request)
+    const admin = getSupabaseAdmin()
+    const productIds = orderInput.items.map((item) => item.product_id)
+
+    const { data: products, error: productsError } = await admin
+      .from('products')
+      .select('id,name,price,image_url')
+      .in('id', productIds)
+
+    if (productsError) {
+      console.error('Product lookup failed:', productsError)
+      return errorResponse('Unable to verify order items', 503)
     }
 
-    // Start transaction: create order and deduct inventory
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    const customerId = session?.user?.id || null
-
-    // Create order with pending_payment status
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .insert({
-        customer_id: customerId,
-        customer_email: body.customer_email,
-        customer_phone: body.customer_phone,
-        customer_address: body.customer_address,
-        items: body.items,
-        total_amount: body.total_amount,
-        status: 'pending_payment',
-        payment_method: body.payment_method,
-        payment_status: 'pending',
-      })
-      .select()
-      .single()
-
-    if (orderError || !order) {
-      console.error('Order creation error:', orderError)
-      return NextResponse.json(
-        { error: 'Failed to create order' },
-        { status: 500 }
-      )
-    }
-
-    // Deduct inventory for each item (real-time for website orders, spec §9.1)
-    for (const item of body.items) {
-      // Update product_inventory quantity
-      const { error: inventoryError } = await supabase.rpc('deduct_inventory', {
-        product_id: item.product_id,
-        quantity: item.quantity,
-        order_id: order.id,
-      })
-
-      if (inventoryError) {
-        console.warn(`Inventory deduction issue for ${item.product_id}:`, inventoryError)
-        // Don't fail the order if inventory deduction has issues
-        // Admin can manually adjust if needed
+    const productMap = new Map((products ?? []).map((product) => [product.id, product as ProductSnapshot]))
+    const items = orderInput.items.map((item) => {
+      const product = productMap.get(item.product_id)
+      if (!product) {
+        throw new ValidationError('One or more products are no longer available')
       }
-
-      // Create inventory log entry
-      await supabase.from('inventory_logs').insert({
-        product_id: item.product_id,
-        quantity_change: -item.quantity,
-        reason: 'order_created',
-        order_id: order.id,
-      })
-    }
-
-    // Create payment record (pending)
-    const { error: paymentError } = await supabase.from('payments').insert({
-      order_id: order.id,
-      amount: body.total_amount,
-      method: body.payment_method,
-      status: 'pending',
+      return {
+        product_id: product.id,
+        product_name: product.name,
+        price: Number(product.price),
+        quantity: item.quantity,
+        image_url: product.image_url ?? null,
+      }
     })
 
-    if (paymentError) {
-      console.error('Payment record error:', paymentError)
-      // Don't fail the order if payment record creation fails
+    const totalAmount = Math.round(items.reduce((total, item) => total + item.price * item.quantity, 0) * 100) / 100
+    if (totalAmount <= 0) {
+      throw new ValidationError('Order total must be greater than zero')
+    }
+
+    const { data: order, error: orderError } = await admin.rpc('create_order_with_payment', {
+      p_customer_id: requestUser?.user.id ?? null,
+      p_customer_name: orderInput.customer_name,
+      p_customer_email: orderInput.customer_email,
+      p_customer_phone: orderInput.customer_phone,
+      p_customer_address: orderInput.customer_address,
+      p_items: items,
+      p_total_amount: totalAmount,
+      p_payment_method: orderInput.payment_method,
+       p_delivery_method: orderInput.delivery_method,
+       p_idempotency_key: idempotencyKey,
+       p_request_hash: requestHash,
+       p_transaction_id: orderInput.transaction_id ?? null,
+       p_payment_evidence: orderInput.payment_evidence ?? null,
+    })
+
+    if (orderError || !order) {
+      console.error('Order creation failed:', orderError)
+      return errorResponse('Unable to create order', 500)
     }
 
     return NextResponse.json(
       {
         order_id: order.id,
-        status: 'pending_payment',
-        message: 'Order created successfully. Awaiting payment confirmation.',
+        status: order.status,
+        payment_status: order.payment_status,
+        idempotency_key: idempotencyKey,
       },
       { status: 201 }
     )
   } catch (error) {
-    console.error('Order creation error:', error)
-    return NextResponse.json(
-      { error: 'Failed to create order' },
-      { status: 500 }
-    )
+    if (error instanceof ValidationError) {
+      return errorResponse(error.message, 400)
+    }
+    if (error instanceof ServerAuthError) {
+      return errorResponse(error.message, error.status)
+    }
+    if (error instanceof Error && error.message === 'Too many requests') {
+      return errorResponse('Too many order requests. Please try again later.', 429)
+    }
+
+    console.error('Order request failed:', error)
+    return errorResponse('Unable to create order', 500)
   }
 }

@@ -40,7 +40,7 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
 
   useEffect(() => {
     handleFilterChange()
-  }, [selectedCategory, minPrice, maxPrice])
+  }, [handleFilterChange])
 
   return (
     <div className="bg-white p-4 rounded-lg shadow">

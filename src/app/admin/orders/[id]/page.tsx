@@ -109,9 +109,10 @@ export default function AdminOrderDetailPage() {
 
   const statusOptions = [
     { value: 'pending_payment', label: 'Pending Payment' },
-    { value: 'confirmed', label: 'Confirmed' },
+    { value: 'received', label: 'Order Received' },
     { value: 'processing', label: 'Processing' },
-    { value: 'shipped', label: 'Shipped' },
+    { value: 'ready', label: 'Ready' },
+    { value: 'out_for_delivery', label: 'Out for Delivery' },
     { value: 'delivered', label: 'Delivered' },
     { value: 'cancelled', label: 'Cancelled' },
   ]
@@ -166,7 +167,7 @@ export default function AdminOrderDetailPage() {
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Order Items</h2>
             <div className="space-y-3">
-              {(order.items as Array<any>).map((item, idx) => (
+              {order.items.map((item, idx) => (
                 <div key={idx} className="flex justify-between items-center pb-3 border-b border-gray-100 last:border-b-0">
                   <div>
                     <p className="font-medium text-gray-900">{item.product_name}</p>
@@ -283,7 +284,7 @@ export default function AdminOrderDetailPage() {
                 <p className="text-sm text-gray-600">Payment Status</p>
                 <span
                   className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                    order.payment_status === 'confirmed'
+                    order.payment_status === 'paid'
                       ? 'bg-green-100 text-green-800'
                       : order.payment_status === 'failed'
                         ? 'bg-red-100 text-red-800'

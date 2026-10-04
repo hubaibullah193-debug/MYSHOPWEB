@@ -65,7 +65,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         updateQuantity: handleUpdateQuantity,
         removeItem: handleRemoveItem,
         clearCart: handleClearCart,
-        itemCount: cart.items.length,
+        itemCount: cart.items.reduce((count, item) => count + item.quantity, 0),
       }}
     >
       {children}

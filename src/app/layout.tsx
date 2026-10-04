@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import I18nProvider from '@/components/I18nProvider'
+import { CartProvider } from '@/lib/cart-context'
 
 export const metadata: Metadata = {
   title: 'Hubaib One Stop Shop',
@@ -16,7 +17,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <I18nProvider>{children}</I18nProvider>
+        <CartProvider>
+          <I18nProvider>{children}</I18nProvider>
+        </CartProvider>
       </body>
     </html>
   )
