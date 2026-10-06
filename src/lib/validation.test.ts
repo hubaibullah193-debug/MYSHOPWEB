@@ -3,6 +3,7 @@ import {
   parseOrderInput,
   parseOrderTrackingInput,
   parseIdempotencyKey,
+  parsePaymentStatusFilter,
   ValidationError,
 } from '@/lib/validation'
 
@@ -138,5 +139,27 @@ describe('parseIdempotencyKey', () => {
 
   it('accepts a well-formed key', () => {
     expect(parseIdempotencyKey('order-1234567890-abcdef')).toBe('order-1234567890-abcdef')
+  })
+})
+
+describe('parsePaymentStatusFilter', () => {
+  it('accepts each payment status and the action shortcut', () => {
+    expect(parsePaymentStatusFilter('pending')).toBe('pending')
+    expect(parsePaymentStatusFilter('paid')).toBe('paid')
+    expect(parsePaymentStatusFilter('failed')).toBe('failed')
+    expect(parsePaymentStatusFilter('refunded')).toBe('refunded')
+    expect(parsePaymentStatusFilter('action')).toBe('action')
+  })
+
+  it('returns undefined for missing or empty values', () => {
+    expect(parsePaymentStatusFilter(undefined)).toBeUndefined()
+    expect(parsePaymentStatusFilter(null)).toBeUndefined()
+    expect(parsePaymentStatusFilter('')).toBeUndefined()
+    expect(parsePaymentStatusFilter('   ')).toBeUndefined()
+  })
+
+  it('rejects unknown statuses and non-strings', () => {
+    expect(() => parsePaymentStatusFilter('confirmed')).toThrow(ValidationError)
+    expect(() => parsePaymentStatusFilter(123)).toThrow(ValidationError)
   })
 })

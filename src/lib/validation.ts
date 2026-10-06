@@ -260,6 +260,24 @@ export function parsePaymentAction(value: unknown): 'confirm' | 'fail' | 'refund
   return value
 }
 
+export const PAYMENT_STATUSES = ['pending', 'paid', 'failed', 'refunded'] as const
+export type PaymentStatusValue = (typeof PAYMENT_STATUSES)[number]
+export type PaymentStatusFilter = 'action' | PaymentStatusValue
+
+export function parsePaymentStatusFilter(value: unknown): PaymentStatusFilter | undefined {
+  if (value === undefined || value === null || value === '') return undefined
+  if (typeof value !== 'string') {
+    throw new ValidationError('Invalid payment status filter')
+  }
+  const status = value.trim()
+  if (status === '') return undefined
+  if (status === 'action') return 'action'
+  if ((PAYMENT_STATUSES as readonly string[]).includes(status)) {
+    return status as PaymentStatusValue
+  }
+  throw new ValidationError('Invalid payment status filter')
+}
+
 export function parseDeliveryDate(value: unknown): string {
   const date = requiredText(value, 'Delivery date', 10)
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {

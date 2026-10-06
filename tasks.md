@@ -11,15 +11,15 @@ Each task is executed one at a time: implement → verify → commit → manual 
 
 ---
 
-## Static Gate Snapshot (verified 2026-10-02)
+## Static Gate Snapshot (verified 2026-10-06)
 
 | Gate | Result |
 |------|--------|
 | `npx tsc --noEmit` | PASS (exit 0) |
-| `npx jest --runInBand` | PASS — 4 suites, 38 tests |
+| `npx jest` | PASS — 7 passed + 1 skipped suite (integration), 104 passed, 11 skipped, 115 total |
 | `npx next lint` | PASS — 0 errors, 0 warnings |
-| `npx next build` | PASS — 19 static pages + 8 API routes + /login + /signup, clean output |
-| Live Supabase DB / Storage / Auth | **BLOCKED** — no `NEXT_PUBLIC_SUPABASE_URL`, anon key, or service-role key configured; migration 003 never applied to a real project |
+| `npx next build` | PASS — clean output, only pre-existing metadata-viewport warnings |
+| Live Supabase DB / Storage / Auth | **BLOCKED** — no `NEXT_PUBLIC_SUPABASE_URL`, anon key, or service-role key configured; migrations 003–005 never applied to a real project |
 
 ---
 
@@ -114,17 +114,24 @@ Each task is executed one at a time: implement → verify → commit → manual 
 - No seed reference zones for local demo.
 - Live verification blocked: no Supabase env keys; migration 005 + updated `verify_phase1.sql` not applied.
 
-## T006 — Payments & Refund Operations — **PARTIAL**
+## T006 — Payments & Refund Operations — **STATIC PASS / LIVE BLOCKED**
 
 **Exists:**
 - COD (immediate `received`), JazzCash/Easypaisa (`pending_payment` until verified), transaction reference + screenshot evidence (private bucket, 5MB, PNG/JPEG/WebP + magic bytes, rate-limited upload API).
-- Payment lifecycle `pending → paid → failed → refunded`; admin confirm/fail/refund via `verify_payment` RPC + APIs; activity logging; idempotency; request hash; server-side total verification.
-- Refund foundation: `verify_payment('refund')` + `refundPayment` client helper.
+- Payment lifecycle `pending → paid → failed → refunded`; admin confirm/fail/refund via the `verify_payment` RPC + rate-limited server APIs (`/api/admin/payments` list + `[id]` detail/POST); activity logging; idempotency; request hash; server-side total verification.
+- `verify_payment('refund')` enforces refund-only-from-paid, requires a refund reference, stores `refund_reference`, updates order `payment_status`, and logs `payment_refunded` (migration 003).
+- **Admin payments screen (server API-backed):** status tabs (Action Needed / Pending / Paid / Failed / Refunded), summary counts, list + detail incl. `refund_reference` + `failure_reason`, evidence via signed URL, Confirm / Reject (reason required) / **Record Refund** (reference required) actions, refetch-after-action with success/error notices, link to order.
+- **Refund UI now reachable:** previously the list API only returned `pending`/`failed`, so `paid` payments (the only refundable state) never appeared. A `?status=` filter on the list API plus tabs expose paid/refunded payments and history.
+- `parsePaymentStatusFilter` (+ 3 unit tests); client `getPayments(status?)`/`PaymentListResponse` replaces `getActionablePayments`/`getPaymentSummary`.
+- Integration suite (gated) already covers the refund lifecycle: refund of a non-paid payment rejected, missing refund reference rejected, refund succeeds from `paid`, no re-confirm after refund.
+
+**Verified (static):**
+- `tsc --noEmit` clean; `next lint` clean; jest 7/8 suites, 104 pass, 11 skip; clean `next build` pass (pre-existing metadata-viewport warnings only).
 
 **Remaining:**
-- Refund UI is unreachable — `payments` list only returns `pending`/`failed`, so `paid` payments (the only refundable state) never appear; no refund button.
-- Returns / damaged-product workflow UI (spec §11).
-- Webhook/signature architecture (spec §10.6) — **blocked/decision**: no online gateway provider approved; do **not** invent one. Document provider decision (see `DECISIONS` below).
+- Returns / damaged-product workflow UI (spec §11): returns are requested through WhatsApp/contact per spec — no web form. Admin records the refund on the Payments screen; a dedicated returns-claims admin page is re-evaluated at T008, and the public Returns & Refunds info page belongs to T009.
+- Online gateway/webhooks (spec §10.6): **decision — no provider approved/configured**. Manual JazzCash/Easypaisa verification + recorded refunds only; no gateway or webhook code implemented (see `DECISIONS` below).
+- Live verification blocked: no Supabase env keys; migration 005 + updated `verify_phase1.sql` not applied.
 
 ## T007 — Customer Features & Communication — **PARTIAL**
 

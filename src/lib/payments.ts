@@ -1,168 +1,72 @@
-import { supabase } from './supabase'
+import { apiFetch } from './api'
+
+export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded'
+export type PaymentStatusFilter = 'action' | PaymentStatus
 
 export interface Payment {
   id: string
   order_id: string
   amount: number
   method: 'cod' | 'jazz_cash' | 'easypaisa'
-  status: 'pending' | 'confirmed' | 'failed'
-  transaction_id?: string
-  verified_by_admin_id?: string
-  verified_at?: string
-  admin_notes?: string
+  status: PaymentStatus
+  transaction_id?: string | null
+  refund_reference?: string | null
+  failure_reason?: string | null
+  payment_evidence_url?: string | null
+  evidence_url?: string | null
+  admin_notes?: string | null
   created_at: string
   updated_at: string
 }
 
-/**
- * Get all pending payments
- */
-export async function getPendingPayments() {
-  const { data, error } = await supabase
-    .from('payments')
-    .select('*')
-    .eq('status', 'pending')
-    .order('created_at', { ascending: false })
-
-  if (error) {
-    throw error
+export interface PaymentWithOrder extends Payment {
+  orders?: {
+    id: string
+    customer_name?: string
+    customer_email: string
+    customer_phone: string
+    customer_address: string
+    total_amount: number
+    status: string
+    items: Array<Record<string, unknown>>
   }
-
-  return data || []
 }
 
-/**
- * Get payment with order details
- */
-export async function getPaymentWithOrder(paymentId: string) {
-  const { data, error } = await supabase
-    .from('payments')
-    .select(
-      `
-      *,
-      orders:order_id(
-        id,
-        customer_email,
-        customer_phone,
-        customer_address,
-        total_amount,
-        status,
-        items
-      )
-    `
-    )
-    .eq('id', paymentId)
-    .single()
-
-  if (error) {
-    throw error
-  }
-
-  return data
+export interface PaymentListResponse {
+  payments: PaymentWithOrder[]
+  summary: Record<PaymentStatus, number>
 }
 
-/**
- * Confirm payment (manual admin verification)
- */
-export async function confirmPayment(
-  paymentId: string,
-  adminId: string,
-  adminNotes?: string
-) {
-  const now = new Date().toISOString()
-
-  const { data, error } = await supabase
-    .from('payments')
-    .update({
-      status: 'confirmed',
-      verified_by_admin_id: adminId,
-      verified_at: now,
-      admin_notes: adminNotes,
-      updated_at: now,
-    })
-    .eq('id', paymentId)
-    .select()
-    .single()
-
-  if (error) {
-    throw error
-  }
-
-  // Also update order status to confirmed
-  if (data.order_id) {
-    await supabase
-      .from('orders')
-      .update({ status: 'confirmed', updated_at: now })
-      .eq('id', data.order_id)
-  }
-
-  return data
+export async function getPayments(status?: PaymentStatusFilter): Promise<PaymentListResponse> {
+  const query = status ? `?status=${status}` : ''
+  return apiFetch<PaymentListResponse>(`/api/admin/payments${query}`)
 }
 
-/**
- * Fail payment (mark as failed)
- */
-export async function failPayment(
-  paymentId: string,
-  adminId: string,
-  reason: string
-) {
-  const now = new Date().toISOString()
-
-  const { data, error } = await supabase
-    .from('payments')
-    .update({
-      status: 'failed',
-      verified_by_admin_id: adminId,
-      verified_at: now,
-      admin_notes: reason,
-      updated_at: now,
-    })
-    .eq('id', paymentId)
-    .select()
-    .single()
-
-  if (error) {
-    throw error
-  }
-
-  return data
+export async function getPaymentWithOrder(paymentId: string): Promise<PaymentWithOrder> {
+  const result = await apiFetch<{ payment: PaymentWithOrder }>(`/api/admin/payments/${paymentId}`)
+  return result.payment
 }
 
-/**
- * Get payments by status
- */
-export async function getPaymentsByStatus(status: 'pending' | 'confirmed' | 'failed') {
-  const { data, error } = await supabase
-    .from('payments')
-    .select('*')
-    .eq('status', status)
-    .order('created_at', { ascending: false })
-
-  if (error) {
-    throw error
-  }
-
-  return data || []
+export async function confirmPayment(paymentId: string, notes?: string, transactionId?: string) {
+  const result = await apiFetch<{ payment: Payment }>(`/api/admin/payments/${paymentId}`, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'confirm', notes, transaction_id: transactionId }),
+  })
+  return result.payment
 }
 
-/**
- * Get payment summary (counts by status)
- */
-export async function getPaymentSummary() {
-  const statuses = ['pending', 'confirmed', 'failed']
-  const summary: Record<string, number> = {}
+export async function failPayment(paymentId: string, reason: string) {
+  const result = await apiFetch<{ payment: Payment }>(`/api/admin/payments/${paymentId}`, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'fail', notes: reason }),
+  })
+  return result.payment
+}
 
-  for (const status of statuses) {
-    const { data, error } = await supabase
-      .from('payments')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', status)
-
-    if (!error) {
-      summary[status] = data?.length || 0
-    }
-  }
-
-  return summary
+export async function refundPayment(paymentId: string, refundReference: string, notes?: string) {
+  const result = await apiFetch<{ payment: Payment }>(`/api/admin/payments/${paymentId}`, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'refund', transaction_id: refundReference, notes }),
+  })
+  return result.payment
 }
