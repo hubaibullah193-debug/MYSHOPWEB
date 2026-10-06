@@ -6,6 +6,8 @@ import Image from 'next/image'
 import { getProductById } from '@/lib/products'
 import { useCart } from '@/lib/cart-context'
 import type { ProductWithInventory } from '@/lib/products'
+import ProductReviews from '@/components/ProductReviews'
+import ProductRequestForm from '@/components/ProductRequestForm'
 
 export default function ProductDetailPage() {
   const router = useRouter()
@@ -67,7 +69,8 @@ export default function ProductDetailPage() {
   const inStock = product.quantity > 0
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
       {/* Product Image */}
       <div>
         <div className="bg-gray-200 rounded-lg overflow-hidden">
@@ -181,8 +184,8 @@ export default function ProductDetailPage() {
           </div>
         )}
 
-        {/* Quantity and Add to Cart */}
-        {inStock && (
+        {/* Quantity and Add to Cart / Product Request */}
+        {inStock ? (
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
@@ -244,6 +247,8 @@ export default function ProductDetailPage() {
               </div>
             )}
           </div>
+        ) : (
+          <ProductRequestForm productName={product.name} />
         )}
 
         {/* Product Info */}
@@ -259,5 +264,8 @@ export default function ProductDetailPage() {
         </div>
       </div>
     </div>
+
+    <ProductReviews productId={product.id} />
+    </>
   )
 }

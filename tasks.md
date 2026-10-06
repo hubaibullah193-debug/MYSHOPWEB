@@ -133,18 +133,25 @@ Each task is executed one at a time: implement → verify → commit → manual 
 - Online gateway/webhooks (spec §10.6): **decision — no provider approved/configured**. Manual JazzCash/Easypaisa verification + recorded refunds only; no gateway or webhook code implemented (see `DECISIONS` below).
 - Live verification blocked: no Supabase env keys; migration 005 + updated `verify_phase1.sql` not applied.
 
-## T007 — Customer Features & Communication — **PARTIAL**
+## T007 — Customer Features & Communication — **STATIC PASS / LIVE BLOCKED**
 
-**Exists:**
-- Order tracking (order ID + WhatsApp).
+**Implemented (2026-10-06):**
+- **Reviews (spec §15):**
+  - Migration **`006_product_requests_and_reviews.sql`**: `reviews.order_id` (FK to orders, `ON DELETE SET NULL`) + partial unique `(order_id, product_id)` so one verified review per purchased product per order; `submit_review` RPC (SECURITY DEFINER, service_role-only) validates rating 1–5 / review 1–2000 / normalized phone, requires a matching **delivered** order with the product in its items, derives the display name from the order, and blocks duplicates ("You have already reviewed this product for this order").
+  - **Moderation is remove-only at the data layer:** `remove_review` flips `is_removed` and logs `review_removed` — it cannot edit customer content; `public_reviews` view already omits removed/invalid reviews (needs live apply).
+  - `/api/reviews` POST (rate-limited `reviews:` key) → `submit_review`; `/api/admin/reviews` GET + `[id]` POST (`{action:'remove'}`) → `remove_review`; both `requireAdmin`/service-role RPC-backed. Admin Reviews screen (replaces placeholder): levels/tabs (Visible / Removed / All), Verified badge, Remove button. `safeDatabaseError` extended with new RPC messages.
+  - Shop: `ProductReviews` component (list w/ stars + Featured badge) + "Write a review" form (order ID + WhatsApp + rating + review) on each product detail page; reviews load via the `public_reviews` view (anon client, same pattern as `products.ts`).
+- **Product requests / out-of-stock (spec §14):** `product_requests` table (customer_name 1–120, whatsapp PK-format regex, product_name 1–200, quantity 1–100, optional message ≤1000, status `pending/contacted/completed/cancelled`, admin_notes, created/updated_at). **RLS enabled with zero policies — default-deny**; all reads/writes go through service-role API routes (`/api/product-requests` POST rate-limited; `/api/admin/product-requests` GET + `[id]` POST via `admin_update_product_request` RPC which validates status transitions + notes and logs `product_request_status_updated` with `{from,to}`). `ProductRequestForm` shown on out-of-stock product pages; admin Product Requests screen (status filter tabs, per-row status + notes editor, WhatsApp follow-up link) + "Product Requests" nav item.
+- **WhatsApp click-to-chat (manual only):** `src/lib/business-config.ts` single source of truth — `NEXT_PUBLIC_WHATSAPP_NUMBER` → normalized `wa.me` link with prefilled text; `whatsappLink` returns null when unset (callers fall back to the Contact page). Unit-tested. CTA buttons wired into checkout (no-delivery-area + can't-find-area notices), order tracking results, and order confirmation; Contact page lists location (Pandiali, Danishkool Road Adda Bazar, District Mohmand, KPK), hours (Mon–Sun 7 AM–8 PM) and a returns/refunds note.
+- **Contact page** `/shop/contact` + header link — interim interpretation of "returns/contact communication" (full Returns & Refunds info page remains deferred to T009; recorded here per AGENTS.md).
 
-**Remaining:**
-- Reviews (spec §15): table + RLS exist, no customer submission UI, no purchaser verification, no admin moderation/removal UI, no display on product page.
-- Product requests / out-of-stock request flow (spec §14; `order_requests` table unused).
-- WhatsApp click-to-chat (manual): not implemented anywhere.
-- Returns/contact communication pages.
+**Verified (static):**
+- `tsc --noEmit` clean; `next lint` clean; jest suites pass (new: `business-config`, `parseReviewSubmission` product_id case, `parseProductRequestInput`); clean `next build` pass.
 
-**Constraint:** no automatic WhatsApp notifications (none exist — good).
+**Remaining / blockers:**
+- Live verification blocked: no Supabase env keys; migration 006 + updated `verify_phase1.sql` not applied; reviews moderation, product-request workflow and RPC grants are static-verified only.
+- Automatic WhatsApp notifications remain out of scope (none exist — per constraint).
+- Full Returns & Refunds public info page → T009.
 
 ## T008 — Admin Operations Dashboard — **PARTIAL**
 

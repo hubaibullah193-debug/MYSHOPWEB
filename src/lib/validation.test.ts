@@ -4,6 +4,8 @@ import {
   parseOrderTrackingInput,
   parseIdempotencyKey,
   parsePaymentStatusFilter,
+  parseReviewSubmission,
+  parseProductRequestInput,
   ValidationError,
 } from '@/lib/validation'
 
@@ -161,5 +163,94 @@ describe('parsePaymentStatusFilter', () => {
   it('rejects unknown statuses and non-strings', () => {
     expect(() => parsePaymentStatusFilter('confirmed')).toThrow(ValidationError)
     expect(() => parsePaymentStatusFilter(123)).toThrow(ValidationError)
+  })
+})
+
+describe('parseReviewSubmission', () => {
+  const reviewPayload = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+    product_id: productId,
+    order_id: productId,
+    phone: '+923001234567',
+    rating: 5,
+    review: 'Excellent service',
+    ...overrides,
+  })
+
+  it('accepts a valid review and normalizes the phone', () => {
+    const review = parseReviewSubmission(reviewPayload())
+    expect(review.product_id).toBe(productId)
+    expect(review.order_id).toBe(productId)
+    expect(review.phone).toBe('923001234567')
+    expect(review.rating).toBe(5)
+    expect(review.review).toBe('Excellent service')
+  })
+
+  it('rejects an invalid product or order id', () => {
+    expect(() => parseReviewSubmission(reviewPayload({ product_id: 'not-a-uuid' }))).toThrow(ValidationError)
+    expect(() => parseReviewSubmission(reviewPayload({ order_id: 'not-a-uuid' }))).toThrow(ValidationError)
+  })
+
+  it('rejects an invalid phone number', () => {
+    expect(() => parseReviewSubmission(reviewPayload({ phone: '12345' }))).toThrow(ValidationError)
+  })
+
+  it('rejects ratings outside the 1-5 range', () => {
+    expect(() => parseReviewSubmission(reviewPayload({ rating: 0 }))).toThrow(ValidationError)
+    expect(() => parseReviewSubmission(reviewPayload({ rating: 6 }))).toThrow(ValidationError)
+    expect(() => parseReviewSubmission(reviewPayload({ rating: '5' }))).toThrow(ValidationError)
+  })
+
+  it('rejects a missing or oversized review', () => {
+    expect(() => parseReviewSubmission(reviewPayload({ review: '' }))).toThrow(ValidationError)
+    expect(() => parseReviewSubmission(reviewPayload({ review: 'x'.repeat(2001) }))).toThrow(ValidationError)
+  })
+})
+
+describe('parseProductRequestInput', () => {
+  it('accepts a valid request without a message', () => {
+    const request = parseProductRequestInput({
+      customer_name: 'Ali',
+      whatsapp: '03001234567',
+      product_name: 'Cricket ball',
+      quantity: 2,
+    })
+    expect(request.whatsapp).toBe('923001234567')
+    expect(request.quantity).toBe(2)
+    expect(request.message).toBeUndefined()
+  })
+
+  it('accepts an optional message', () => {
+    const request = parseProductRequestInput({
+      customer_name: 'Ali',
+      whatsapp: '03001234567',
+      product_name: 'Cricket ball',
+      quantity: 2,
+      message: 'Need it before Friday',
+    })
+    expect(request.message).toBe('Need it before Friday')
+  })
+
+  it('rejects an invalid WhatsApp number', () => {
+    expect(() =>
+      parseProductRequestInput({ customer_name: 'Ali', whatsapp: 'abc', product_name: 'Ball', quantity: 1 })
+    ).toThrow(ValidationError)
+  })
+
+  it('rejects an invalid quantity', () => {
+    expect(() =>
+      parseProductRequestInput({ customer_name: 'Ali', whatsapp: '03001234567', product_name: 'Ball', quantity: 0 })
+    ).toThrow(ValidationError)
+    expect(() =>
+      parseProductRequestInput({ customer_name: 'Ali', whatsapp: '03001234567', product_name: 'Ball', quantity: 101 })
+    ).toThrow(ValidationError)
+  })
+
+  it('rejects a missing name or product name', () => {
+    expect(() =>
+      parseProductRequestInput({ customer_name: '', whatsapp: '03001234567', product_name: 'Ball', quantity: 1 })
+    ).toThrow(ValidationError)
+    expect(() =>
+      parseProductRequestInput({ customer_name: 'Ali', whatsapp: '03001234567', product_name: '', quantity: 1 })
+    ).toThrow(ValidationError)
   })
 })

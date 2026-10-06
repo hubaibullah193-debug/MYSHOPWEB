@@ -51,6 +51,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Printing Requests', href: '/admin/printing-requests' },
       { label: 'Bulk Orders', href: '/admin/bulk-orders' },
+      { label: 'Product Requests', href: '/admin/product-requests' },
     ],
   },
   {

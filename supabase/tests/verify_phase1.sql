@@ -609,3 +609,146 @@ BEGIN
   RAISE NOTICE 'verify_phase1.sql: migration 005 delivery-zone checks passed';
 END;
 $verify$;
+
+-- =============================================================================
+-- Migration 006 checks: product requests, verifiable reviews, review RPCs
+-- =============================================================================
+DO $verify$
+DECLARE
+  f_submit   oid;
+  f_remove   oid;
+  f_req_upd  oid;
+  has_policy BOOLEAN;
+BEGIN
+  -- ---------------------------------------------------------------------------
+  -- product_requests table + RLS (migration 006)
+  -- ---------------------------------------------------------------------------
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'product_requests'
+  ) THEN
+    RAISE EXCEPTION 'FAILED: table public.product_requests exists (migration 006)';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relname = 'product_requests' AND c.relrowsecurity
+  ) THEN
+    RAISE EXCEPTION 'FAILED: RLS enabled on public.product_requests';
+  END IF;
+
+  -- Default-deny: no RLS policies at all; access is service-role via API routes.
+  SELECT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'product_requests'
+  ) INTO has_policy;
+  IF has_policy THEN
+    RAISE EXCEPTION 'FAILED: product_requests has no RLS policies (default deny)';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'product_requests' AND column_name = 'whatsapp'
+  ) THEN
+    RAISE EXCEPTION 'FAILED: product_requests.whatsapp column exists';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'product_requests' AND column_name = 'quantity'
+  ) THEN
+    RAISE EXCEPTION 'FAILED: product_requests.quantity column exists';
+  END IF;
+
+  SELECT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    WHERE c.conrelid = 'public.product_requests'::regclass
+      AND c.contype = 'c'
+      AND pg_get_constraintdef(c.oid) LIKE '%pending%contacted%completed%cancelled%'
+  ) INTO has_policy;
+  IF NOT has_policy THEN
+    RAISE EXCEPTION 'FAILED: product_requests.status check constraint (workflow)';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE schemaname = 'public' AND indexname = 'idx_product_requests_status_created'
+  ) THEN
+    RAISE EXCEPTION 'FAILED: index idx_product_requests_status_created exists';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger
+    WHERE tgname = 'product_requests_set_updated_at' AND tgrelid = 'public.product_requests'::regclass
+  ) THEN
+    RAISE EXCEPTION 'FAILED: product_requests_set_updated_at trigger';
+  END IF;
+
+  -- ---------------------------------------------------------------------------
+  -- reviews.order_id + partial unique index (migration 006)
+  -- ---------------------------------------------------------------------------
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'reviews' AND column_name = 'order_id'
+  ) THEN
+    RAISE EXCEPTION 'FAILED: reviews.order_id column exists';
+  END IF;
+
+  SELECT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE schemaname = 'public' AND indexname = 'idx_reviews_order_product'
+      AND indexdef LIKE '%UNIQUE%' AND indexdef LIKE '%WHERE order_id IS NOT NULL%'
+  ) INTO has_policy;
+  IF NOT has_policy THEN
+    RAISE EXCEPTION 'FAILED: idx_reviews_order_product partial unique index';
+  END IF;
+
+  -- ---------------------------------------------------------------------------
+  -- T007 enforcement RPCs: exact signatures, service_role only
+  -- ---------------------------------------------------------------------------
+  SELECT p.oid INTO f_submit
+  FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public' AND p.proname = 'submit_review'
+    AND pg_get_function_identity_arguments(p.oid) = 'uuid, uuid, text, integer, text'
+  LIMIT 1;
+  IF f_submit IS NULL THEN
+    RAISE EXCEPTION 'FAILED: submit_review(uuid, uuid, text, int, text) exists';
+  END IF;
+  IF NOT has_function_privilege('service_role', f_submit, 'EXECUTE')
+     OR has_function_privilege('anon', f_submit, 'EXECUTE')
+     OR has_function_privilege('authenticated', f_submit, 'EXECUTE') THEN
+    RAISE EXCEPTION 'FAILED: submit_review privilege model (service_role only)';
+  END IF;
+
+  SELECT p.oid INTO f_remove
+  FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public' AND p.proname = 'remove_review'
+    AND pg_get_function_identity_arguments(p.oid) = 'uuid, uuid'
+  LIMIT 1;
+  IF f_remove IS NULL THEN
+    RAISE EXCEPTION 'FAILED: remove_review(uuid, uuid) exists';
+  END IF;
+  IF NOT has_function_privilege('service_role', f_remove, 'EXECUTE')
+     OR has_function_privilege('anon', f_remove, 'EXECUTE')
+     OR has_function_privilege('authenticated', f_remove, 'EXECUTE') THEN
+    RAISE EXCEPTION 'FAILED: remove_review privilege model (service_role only)';
+  END IF;
+
+  SELECT p.oid INTO f_req_upd
+  FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public' AND p.proname = 'admin_update_product_request'
+    AND pg_get_function_identity_arguments(p.oid) = 'uuid, uuid, text, text'
+  LIMIT 1;
+  IF f_req_upd IS NULL THEN
+    RAISE EXCEPTION 'FAILED: admin_update_product_request(uuid, uuid, text, text) exists';
+  END IF;
+  IF NOT has_function_privilege('service_role', f_req_upd, 'EXECUTE')
+     OR has_function_privilege('anon', f_req_upd, 'EXECUTE')
+     OR has_function_privilege('authenticated', f_req_upd, 'EXECUTE') THEN
+    RAISE EXCEPTION 'FAILED: admin_update_product_request privilege model (service_role only)';
+  END IF;
+
+  RAISE NOTICE 'verify_phase1.sql: migration 006 product-request/review checks passed';
+END;
+$verify$;

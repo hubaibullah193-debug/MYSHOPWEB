@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from 'react'
 import Link from 'next/link'
+import WhatsAppContactLink from '@/components/WhatsAppContactLink'
 
 interface TrackedOrder {
   id: string
@@ -188,6 +189,19 @@ export default function TrackOrderPage() {
                 <span>PKR {order.total_amount.toLocaleString()}</span>
               </div>
             </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="font-semibold text-gray-900 mb-1">Questions about this order?</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Tell us your order ID and we&apos;ll help with delivery, payment, or returns.
+            </p>
+            <WhatsAppContactLink
+              message={`Asalaam-o-Alaikum, I have a question about order ${order.id.slice(0, 8)}.`}
+              className="inline-block px-5 py-2.5 bg-green-600 hover:bg-green-700 rounded-lg text-white font-semibold transition"
+            >
+              Chat on WhatsApp
+            </WhatsAppContactLink>
           </div>
         </div>
       )}

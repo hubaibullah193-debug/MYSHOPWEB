@@ -133,6 +133,15 @@ export function safeDatabaseError(error: { message?: string } | null | undefined
     'A failure reason is required',
     'A refund reference is required',
     'Invalid delivery assignment',
+    'Invalid rating',
+    'Invalid WhatsApp number',
+    'Invalid review text',
+    'Reviews can only be submitted for delivered orders',
+    'Product not found in this order',
+    'You have already reviewed this product for this order',
+    'Review not found',
+    'Product request not found',
+    'Invalid product request status',
   ])
   return message && safeMessages.has(message) ? message : fallback
 }

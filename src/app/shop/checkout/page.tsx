@@ -6,6 +6,7 @@ import { useCart } from '@/lib/cart-context'
 import { useAuth } from '@/hooks/useAuth'
 import { getAuthToken } from '@/lib/auth'
 import { normalizePhone } from '@/lib/validation'
+import WhatsAppContactLink from '@/components/WhatsAppContactLink'
 
 interface DeliveryZoneOption {
   id: string
@@ -245,6 +246,12 @@ export default function CheckoutPage() {
                           We don&apos;t currently offer home delivery in your area. Please choose shop pickup
                           instead, or message us on WhatsApp and we&apos;ll see what we can arrange.
                         </p>
+                        <WhatsAppContactLink
+                          message="Asalaam-o-Alaikum, I placed an order but home delivery isn't showing for my area. Can you help?"
+                          className="inline-block mt-3 px-4 py-2 bg-green-600 hover:bg-green-700 rounded text-white text-sm font-semibold transition"
+                        >
+                          Chat on WhatsApp
+                        </WhatsAppContactLink>
                       </div>
                     ) : (
                       <>
@@ -257,7 +264,14 @@ export default function CheckoutPage() {
                           ))}
                         </select>
                         <p className="text-xs text-gray-500 mt-1">
-                          Can&apos;t find your area? Message us on WhatsApp or choose shop pickup.
+                          Can&apos;t find your area?{' '}
+                          <WhatsAppContactLink
+                            message="Asalaam-o-Alaikum, I couldn't find my delivery area at checkout."
+                            className="text-primary underline"
+                          >
+                            Message us on WhatsApp
+                          </WhatsAppContactLink>{' '}
+                          or choose shop pickup.
                         </p>
                       </>
                     )}

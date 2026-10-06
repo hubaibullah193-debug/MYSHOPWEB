@@ -298,3 +298,77 @@ export function parseOptionalUuid(value: unknown, field = 'ID'): string | null {
   }
   return id
 }
+
+export interface ReviewSubmission {
+  product_id: string
+  order_id: string
+  phone: string
+  rating: number
+  review: string
+}
+
+export function parseReviewSubmission(value: unknown): ReviewSubmission {
+  if (!isRecord(value)) {
+    throw new ValidationError('Invalid review data')
+  }
+
+  const productId = requiredText(value.product_id, 'Product', 64)
+  const orderId = requiredText(value.order_id, 'Order ID', 64).toLowerCase()
+  const phone = normalizePhone(requiredText(value.phone, 'WhatsApp number', 20))
+  const review = requiredText(value.review, 'Review', 2000)
+  const rating = value.rating
+
+  if (!isValidUuid(productId)) {
+    throw new ValidationError('Invalid product')
+  }
+  if (!isValidUuid(orderId)) {
+    throw new ValidationError('Invalid order ID')
+  }
+  if (!isValidPhone(phone)) {
+    throw new ValidationError('Enter the WhatsApp number used for the order')
+  }
+  if (!isValidRating(rating)) {
+    throw new ValidationError('Select a rating between 1 and 5 stars')
+  }
+
+  return { product_id: productId, order_id: orderId, phone, rating, review }
+}
+
+export interface ProductRequestInput {
+  customer_name: string
+  whatsapp: string
+  product_name: string
+  quantity: number
+  message?: string
+}
+
+export function parseProductRequestInput(value: unknown): ProductRequestInput {
+  if (!isRecord(value)) {
+    throw new ValidationError('Invalid product request')
+  }
+
+  const customerName = requiredText(value.customer_name, 'Name', 120)
+  const whatsapp = normalizePhone(requiredText(value.whatsapp, 'WhatsApp number', 20))
+  const productName = requiredText(value.product_name, 'Product name', 200)
+  const quantity = value.quantity
+  const message = optionalText(value.message, 'Message', 1000)
+
+  if (!isValidPhone(whatsapp)) {
+    throw new ValidationError('Enter a valid WhatsApp number')
+  }
+  if (typeof quantity !== 'number' || !Number.isInteger(quantity) || quantity < 1 || quantity > 100) {
+    throw new ValidationError('Enter the desired quantity (1-100)')
+  }
+
+  return { customer_name: customerName, whatsapp, product_name: productName, quantity, message }
+}
+
+export type ProductRequestStatus = 'pending' | 'contacted' | 'completed' | 'cancelled'
+
+export function parseProductRequestStatus(value: unknown): ProductRequestStatus {
+  const statuses: ProductRequestStatus[] = ['pending', 'contacted', 'completed', 'cancelled']
+  if (typeof value !== 'string' || !statuses.includes(value as ProductRequestStatus)) {
+    throw new ValidationError('Invalid product request status')
+  }
+  return value as ProductRequestStatus
+}

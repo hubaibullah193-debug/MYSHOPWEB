@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
+import WhatsAppContactLink from '@/components/WhatsAppContactLink'
 
 interface Order {
   id: string
@@ -94,6 +95,12 @@ export default function OrderConfirmationPage() {
       <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
         <h1 className="text-2xl font-bold text-green-900 mb-2">Order placed successfully</h1>
         <p className="text-green-800">Order ID: {orderId.slice(0, 8)}</p>
+        <WhatsAppContactLink
+          message={`Asalaam-o-Alaikum, I just placed order ${orderId.slice(0, 8)}.`}
+          className="inline-block mt-4 px-5 py-2.5 bg-green-600 hover:bg-green-700 rounded-lg text-white font-semibold transition"
+        >
+          Chat on WhatsApp
+        </WhatsAppContactLink>
       </div>
 
       {error && (

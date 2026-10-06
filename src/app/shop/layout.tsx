@@ -33,6 +33,9 @@ export default function ShopLayout({ children }: { children: React.ReactNode }) 
             <Link href="/shop/track" className="hidden sm:inline text-sm font-medium text-gray-700 hover:text-primary">
               Track order
             </Link>
+            <Link href="/shop/contact" className="hidden sm:inline text-sm font-medium text-gray-700 hover:text-primary">
+              Contact
+            </Link>
             <Link href="/shop/cart" className="text-sm font-medium text-gray-700 hover:text-primary">
               Cart ({itemCount})
             </Link>
