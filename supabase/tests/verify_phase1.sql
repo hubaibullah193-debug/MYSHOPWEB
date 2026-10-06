@@ -13,6 +13,8 @@
 --   * private `payment-evidence` storage bucket
 --   * migration 004 catalogue: categories, product_variants, sale pricing
 --     (current_price), admin product/inventory RPCs, product-images bucket
+--   * migration 005 delivery zones, migration 006 product requests + reviews,
+--     and migration 007 admin read-only aggregate RPCs (dashboard + customers)
 --
 -- Safe to run repeatedly. Read-only (no data mutations); intended for the
 -- Supabase test runner (files in supabase/tests/ are wrapped in a transaction)
@@ -750,5 +752,61 @@ BEGIN
   END IF;
 
   RAISE NOTICE 'verify_phase1.sql: migration 006 product-request/review checks passed';
+END;
+$verify$;
+
+-- =============================================================================
+-- Migration 007 checks: admin read-only aggregate RPCs (dashboard + customers)
+-- =============================================================================
+DO $verify$
+DECLARE
+  f_dash oid;
+  f_dir  oid;
+BEGIN
+  -- ---------------------------------------------------------------------------
+  -- admin_dashboard_summary(uuid): exact signature, service_role only
+  -- ---------------------------------------------------------------------------
+  SELECT p.oid INTO f_dash
+  FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public' AND p.proname = 'admin_dashboard_summary'
+    AND pg_get_function_identity_arguments(p.oid) = 'uuid'
+  LIMIT 1;
+  IF f_dash IS NULL THEN
+    RAISE EXCEPTION 'FAILED: admin_dashboard_summary(uuid) exists (migration 007)';
+  END IF;
+  IF NOT has_function_privilege('service_role', f_dash, 'EXECUTE')
+     OR has_function_privilege('anon', f_dash, 'EXECUTE')
+     OR has_function_privilege('authenticated', f_dash, 'EXECUTE') THEN
+    RAISE EXCEPTION 'FAILED: admin_dashboard_summary privilege model (service_role only)';
+  END IF;
+
+  -- ---------------------------------------------------------------------------
+  -- admin_customer_directory(uuid, text, integer): exact signature + grants
+  -- ---------------------------------------------------------------------------
+  SELECT p.oid INTO f_dir
+  FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public' AND p.proname = 'admin_customer_directory'
+    AND pg_get_function_identity_arguments(p.oid) = 'uuid, text, integer'
+  LIMIT 1;
+  IF f_dir IS NULL THEN
+    RAISE EXCEPTION 'FAILED: admin_customer_directory(uuid, text, integer) exists (migration 007)';
+  END IF;
+  IF NOT has_function_privilege('service_role', f_dir, 'EXECUTE')
+     OR has_function_privilege('anon', f_dir, 'EXECUTE')
+     OR has_function_privilege('authenticated', f_dir, 'EXECUTE') THEN
+    RAISE EXCEPTION 'FAILED: admin_customer_directory privilege model (service_role only)';
+  END IF;
+
+  -- ---------------------------------------------------------------------------
+  -- Pending-request index on order_requests
+  -- ---------------------------------------------------------------------------
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE schemaname = 'public' AND indexname = 'idx_order_requests_status_created'
+  ) THEN
+    RAISE EXCEPTION 'FAILED: index idx_order_requests_status_created exists (migration 007)';
+  END IF;
+
+  RAISE NOTICE 'verify_phase1.sql: migration 007 admin RPC checks passed';
 END;
 $verify$;

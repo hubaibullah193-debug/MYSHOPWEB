@@ -617,6 +617,112 @@ describeMaybe('Phase 1 database integration', () => {
     expect(confirmAgain.error?.message).toMatch('Payment cannot be confirmed from its current status')
   })
 
+  test('admin_dashboard_summary aggregates real operation metrics', async () => {
+    const { data, error } = await admin.rpc('admin_dashboard_summary', {
+      p_admin_id: adminId,
+    })
+    expect(error).toBeNull()
+    const row = (data ?? [])[0] as {
+      total_orders: number
+      status_orders: Record<string, number> | null
+      total_sales: number | string
+      low_stock_items: number
+      out_of_stock_items: number
+      pending_product_requests: number
+      new_orders_24h: number
+      new_reviews_24h: number
+    }
+    expect(row).toBeDefined()
+    // Seeded fixtures guarantee at least one order, one low row (1-5) and one empty row.
+    expect(Number(row.total_orders)).toBeGreaterThanOrEqual(1)
+    expect(Number(row.total_sales)).toBeGreaterThanOrEqual(0)
+    expect(row.status_orders).not.toBeNull()
+    expect(Number(row.status_orders?.received ?? 0)).toBeGreaterThanOrEqual(1)
+    expect(Number(row.low_stock_items)).toBeGreaterThanOrEqual(1)
+    expect(Number(row.out_of_stock_items)).toBeGreaterThanOrEqual(1)
+    expect(Number(row.pending_product_requests)).toBeGreaterThanOrEqual(0)
+    expect(Number(row.new_orders_24h)).toBeGreaterThanOrEqual(1)
+    expect(Number(row.new_reviews_24h)).toBeGreaterThanOrEqual(0)
+  })
+
+  test('admin_customer_directory groups orders by phone and totals spend', async () => {
+    const phone = `92303${String(Math.floor(Math.random() * 1e8)).padStart(8, '0')}`
+    const order = await createOrder(admin, {
+      key: idempotencyKey(),
+      hash: hashFor({
+        items: [{ product_id: productCId, quantity: 1 }],
+        paymentMethod: 'cod',
+        phone,
+      }),
+      items: [{ product_id: productCId, quantity: 1 }],
+      total: 75,
+      paymentMethod: 'cod',
+      phone,
+    })
+
+    const { data, error } = await admin.rpc('admin_customer_directory', {
+      p_admin_id: adminId,
+      p_search: phone,
+      p_limit: 50,
+    })
+    expect(error).toBeNull()
+    const entries = (data ?? []) as Array<{
+      phone: string
+      customer_name: string
+      total_orders: number
+      total_spent: number
+      first_order_at: string | null
+      last_order_at: string | null
+    }>
+    const entry = entries.find((item) => item.phone === phone)
+    expect(entry).toBeDefined()
+    expect(entry?.customer_name).toBe(`Integration Test ${testSuffix}`)
+    expect(Number(entry?.total_orders)).toBeGreaterThanOrEqual(1)
+    expect(Number(entry?.total_spent)).toBeGreaterThanOrEqual(Number(order.total_amount))
+    expect(entry?.first_order_at).not.toBeNull()
+    expect(entry?.last_order_at).not.toBeNull()
+  })
+
+  test('admin_customer_directory normalizes a 0-prefixed WhatsApp search', async () => {
+    const phone = `92304${String(Math.floor(Math.random() * 1e8)).padStart(8, '0')}`
+    await createOrder(admin, {
+      key: idempotencyKey(),
+      hash: hashFor({
+        items: [{ product_id: productCId, quantity: 1 }],
+        paymentMethod: 'cod',
+        phone,
+      }),
+      items: [{ product_id: productCId, quantity: 1 }],
+      total: 75,
+      paymentMethod: 'cod',
+      phone,
+    })
+
+    const { data, error } = await admin.rpc('admin_customer_directory', {
+      p_admin_id: adminId,
+      p_search: `0${phone.slice(2)}`,
+      p_limit: 50,
+    })
+    expect(error).toBeNull()
+    const entries = (data ?? []) as Array<{ phone: string }>
+    expect(entries.some((item) => item.phone === phone)).toBe(true)
+  })
+
+  test('admin aggregate RPCs reject non-admin callers', async () => {
+    const strangerId = randomUUID()
+    const dashboard = await admin.rpc('admin_dashboard_summary', {
+      p_admin_id: strangerId,
+    })
+    expect(dashboard.error?.message).toMatch('Admin access required')
+
+    const directory = await admin.rpc('admin_customer_directory', {
+      p_admin_id: strangerId,
+      p_search: null,
+      p_limit: 10,
+    })
+    expect(directory.error?.message).toMatch('Admin access required')
+  })
+
   if (anonKey) {
     let anon: SupabaseClient
 
