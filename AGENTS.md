@@ -82,4 +82,5 @@ If a requirement conflicts with these rules, or you spot a violation:
 
 - **Project Constitution:** `CLAUDE.md`
 - **Specification:** `spec.md`
+- **Phases & Scope Plan:** `PHASES.md`
 - **This Document:** `AGENTS.md`
