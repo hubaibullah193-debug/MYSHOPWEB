@@ -80,8 +80,8 @@ src/
 ## Documentation
 
 - [spec.md](spec.md) — Complete specification and business logic
-- [CLAUDE.md](CLAUDE.md) — Project constitution for AI assistants
-- [AGENTS.md](AGENTS.md) — Agent rules and guidelines
+- [CLAUDE.md](../CLAUDE.md) — Project constitution for AI assistants
+- [AGENTS.md](../AGENTS.md) — Agent rules and guidelines
 - [tasks.md](tasks.md) — Implementation checklist
 
 ## License

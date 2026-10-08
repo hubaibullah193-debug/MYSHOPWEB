@@ -5,7 +5,7 @@ This document is the source of truth for how Claude Code and any AI assistants w
 ## Core Principles
 
 ### 1. **Spec is the source of truth**
-- Follow approved requirements in `spec.md` exactly.
+- Follow approved requirements in `docs/spec.md` exactly.
 - Do not deviate from specified business logic, workflows, or constraints.
 - If you discover the spec is incomplete or conflicts with code, ask before proceeding.
 
@@ -49,11 +49,11 @@ This document is the source of truth for how Claude Code and any AI assistants w
 
 ## How to Use This Document
 
-- **When starting a task:** Re-read this constitution and the relevant section of `spec.md`.
+- **When starting a task:** Re-read this constitution and the relevant section of `docs/spec.md`.
 - **When something feels off:** Check if a principle is being violated; surface it to the user.
 - **When a decision is unclear:** Refer to principles in this order: Spec → Security → Clarity → Scope.
 
 ## References
 
-- **Specification:** `spec.md` (requirements and business logic)
+- **Specification:** `docs/spec.md` (requirements and business logic)
 - **Agent Rules:** `AGENTS.md` (guidelines for AI assistants working on this project)

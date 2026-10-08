@@ -9,7 +9,7 @@ This document defines how AI assistants (Claude Code, subagents, and any other A
 ## Core Rules for All Agents
 
 ### 1. **Read the spec first**
-- Before writing code, changing architecture, or making decisions: read `spec.md` for the current approved phase.
+- Before writing code, changing architecture, or making decisions: read `docs/spec.md` for the current approved phase.
 - If the spec is unclear or incomplete for your task, ask the user before proceeding.
 
 ### 2. **Verify the codebase**
@@ -51,7 +51,7 @@ This document defines how AI assistants (Claude Code, subagents, and any other A
 When unsure what to do, apply this order:
 
 1. **Check CLAUDE.md** — Is this covered by the project constitution?
-2. **Check spec.md** — What do the approved requirements say?
+2. **Check spec.md** — What do the approved requirements say? (`docs/spec.md`)
 3. **Check existing code** — How do we do this in this codebase?
 4. **Ask the user** — If still unclear, do not guess.
 
@@ -81,6 +81,6 @@ If a requirement conflicts with these rules, or you spot a violation:
 ## References
 
 - **Project Constitution:** `CLAUDE.md`
-- **Specification:** `spec.md`
-- **Phases & Scope Plan:** `PHASES.md`
+- **Specification:** `docs/spec.md`
+- **Phases & Scope Plan:** `docs/PHASES.md`
 - **This Document:** `AGENTS.md`
