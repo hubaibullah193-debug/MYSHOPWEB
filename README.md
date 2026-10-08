@@ -79,10 +79,11 @@ src/
 
 ## Documentation
 
-- [spec.md](spec.md) — Complete specification and business logic
-- [CLAUDE.md](../CLAUDE.md) — Project constitution for AI assistants
-- [AGENTS.md](../AGENTS.md) — Agent rules and guidelines
-- [tasks.md](tasks.md) — Implementation checklist
+- [spec.md](docs/spec.md) — Complete specification and business logic
+- [CLAUDE.md](CLAUDE.md) — Project constitution for AI assistants
+- [AGENTS.md](AGENTS.md) — Agent rules and guidelines
+- [tasks.md](docs/tasks.md) — Implementation checklist
+- [remaining-tasks.md](docs/remaining-tasks.md) — Master execution roadmap
 
 ## License
 
