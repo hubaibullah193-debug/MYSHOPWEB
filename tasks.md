@@ -153,15 +153,17 @@ Each task is executed one at a time: implement → verify → commit → manual 
 - Automatic WhatsApp notifications remain out of scope (none exist — per constraint).
 - Full Returns & Refunds public info page → T009.
 
-## T008 — Admin Operations Dashboard — **PARTIAL**
+## T008 — Admin Operations Dashboard — **PARTIAL (Dashboard + Customers done)**
 
 **Exists:**
 - Dashboard page (**metrics are `—` placeholders** — kept honest, no fake data), orders list + status filter, order detail + status/delivery updates, payments verification page, activity log with filters + summary, sidebar nav.
+- **Dashboard overview (§17.1) wired to real queries:** metric cards (total orders, pending payments, processing, total sales, low/out-of-stock), status breakdown, recent orders + recent reviews, and a notifications panel (§20.1) synthesized from summary counts — all via the `admin_dashboard_summary` RPC (live data only when Supabase is reachable).
+- **Customer directory (§21.2):** search by WhatsApp number (0-prefix normalized), name or email; grouped by phone with latest name/email/address, order count, total spent (excludes cancelled), first/last order — via the `admin_customer_directory` RPC.
+- **Migration `007_admin_ops.sql`:** both read-only aggregate RPCs (SECURITY DEFINER, in-function admin check, `service_role`-only grants), `idx_order_requests_status_created`; checks appended to `verify_phase1.sql`; gated integration + unit tests (`dashboard.test.ts`).
 
 **Remaining:**
-- Admin pages for Products, Categories, Inventory, Refunds/Returns, Customers, Reviews, Product Requests, Delivery Zones, Website/Content, Settings (spec §4.2 / §17.2).
-- Dashboard metrics wired to real queries (or remain clearly marked placeholders).
-- We'll keep placeholders marked; no fabricated production metrics.
+- Admin pages still placeholders for Website Content, Bulk Orders, Printing Requests, Refunds/Returns, Analytics (scoped out of the Dashboard + Customers delivery).
+- **Live verification blocked:** no Supabase env keys; migration 007 + updated `verify_phase1.sql` not applied live — **STATIC PASS / LIVE BLOCKED**.
 
 ## T009 — Website UX, Bilingual English/Urdu & RTL — **PARTIAL**
 

@@ -9,7 +9,7 @@ interface ActivityLogEntry {
   action: string
   entity_type: string
   entity_id?: string
-  changes?: Record<string, any>
+  changes?: Record<string, unknown>
   ip_address?: string
   created_at: string
   admin?: {
@@ -46,7 +46,7 @@ export default function AdminActivityPage() {
         })
         setLogs(logsData as ActivityLogEntry[])
 
-        const summaryData = await getActivitySummary(7)
+        const summaryData = await getActivitySummary()
         setSummary(summaryData)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load activity logs')

@@ -1,26 +1,26 @@
--- =============================================================================
+﻿-- =============================================================================
 -- 006_product_requests_and_reviews.sql
 --
--- T007 — Customer Features & Communication.
+-- T007 â€” Customer Features & Communication.
 --
 -- Adds the Phase 1 customer-facing features:
---   * product_requests table (spec §14): customers ask for unavailable
+--   * product_requests table (spec Â§14): customers ask for unavailable
 --     products (name, WhatsApp, product name, quantity, optional message)
 --     with a Pending -> Contacted -> Completed/Cancelled workflow. All access
 --     goes through server API routes with the service role, so RLS is enabled
 --     as a default-deny fence and no anon/authenticated policies are created.
 --   * reviews.order_id (verifiable purchase link) + one review per
---     (order, product) — enforced by submit_review and a partial unique index.
+--     (order, product) â€” enforced by submit_review and a partial unique index.
 --   * submit_review(p_order_id, p_product_id, p_phone, p_rating, p_review)
---     — completes only for a DELIVERED order whose stored WhatsApp number
+--     â€” completes only for a DELIVERED order whose stored WhatsApp number
 --     matches the caller and that actually contains the product; the name is
 --     taken from the order (never from the client); reviews appear immediately
---     through the existing public_reviews view (spec §15.2).
---   * remove_review(p_review_id, p_admin_id) — the ONLY supported admin write
+--     through the existing public_reviews view (spec Â§15.2).
+--   * remove_review(p_review_id, p_admin_id) â€” the ONLY supported admin write
 --     on a review: flips is_removed to TRUE and logs it. Content is never
---     editable (spec §15.2), enforced at the data layer.
+--     editable (spec Â§15.2), enforced at the data layer.
 --   * admin_update_product_request(p_request_id, p_admin_id, p_status, notes)
---     — admin follows up and advances the request workflow (spec §14.2) with
+--     â€” admin follows up and advances the request workflow (spec Â§14.2) with
 --     activity logging.
 --
 -- All enforcement RPCs are SECURITY DEFINER and granted to service_role only
@@ -30,7 +30,7 @@
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------
--- Product requests (spec §14)
+-- Product requests (spec Â§14)
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.product_requests (
   id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -63,7 +63,7 @@ CREATE TRIGGER product_requests_set_updated_at
   EXECUTE FUNCTION public.set_updated_at();
 
 -- ---------------------------------------------------------------------------
--- Reviews: link submissions to the verified order (spec §15)
+-- Reviews: link submissions to the verified order (spec Â§15)
 -- ---------------------------------------------------------------------------
 ALTER TABLE public.reviews
   ADD COLUMN IF NOT EXISTS order_id UUID REFERENCES public.orders(id) ON DELETE SET NULL;
@@ -107,7 +107,7 @@ BEGIN
   END IF;
 
   phone_input := trim(p_phone);
-  IF phone_input NOT ~ '^(?:\+92|0|92)3[0-9]{8,9}$' THEN
+  IF phone_input !~ '^(?:\+92|0|92)3[0-9]{8,9}$' THEN
     RAISE EXCEPTION 'Invalid WhatsApp number';
   END IF;
   IF phone_input LIKE '+%' THEN
@@ -218,7 +218,7 @@ END;
 $$;
 
 -- ---------------------------------------------------------------------------
--- admin_update_product_request: workflow follow-up (spec §14.2).
+-- admin_update_product_request: workflow follow-up (spec Â§14.2).
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.admin_update_product_request(
   p_request_id UUID,

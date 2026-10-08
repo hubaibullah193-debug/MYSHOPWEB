@@ -1,4 +1,4 @@
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
+﻿CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 ALTER TABLE public.orders
   ALTER COLUMN customer_id DROP NOT NULL,
@@ -414,10 +414,10 @@ BEGIN
      OR char_length(trim(p_customer_name)) = 0
      OR p_customer_email IS NULL
      OR char_length(trim(p_customer_email)) = 0
-     OR p_customer_email NOT ~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'
+     OR p_customer_email !~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'
      OR p_customer_phone IS NULL
      OR char_length(trim(p_customer_phone)) = 0
-     OR p_customer_phone NOT ~ '^(?:\+92|0|92)3[0-9]{8,9}$'
+     OR p_customer_phone !~ '^(?:\+92|0|92)3[0-9]{8,9}$'
      OR (p_delivery_method = 'courier' AND (p_customer_address IS NULL OR char_length(trim(p_customer_address)) = 0)) THEN
     RAISE EXCEPTION 'Invalid order details';
   END IF;
@@ -438,7 +438,7 @@ BEGIN
     p_payment_evidence IS NULL
     OR char_length(trim(p_payment_evidence)) < 1
     OR char_length(trim(p_payment_evidence)) > 500
-    OR trim(p_payment_evidence) NOT ~ '^payment-evidence/[0-9a-fA-F-]{36}\.(png|jpe?g|webp)$'
+    OR trim(p_payment_evidence) !~ '^payment-evidence/[0-9a-fA-F-]{36}\.(png|jpe?g|webp)$'
   ) THEN
     RAISE EXCEPTION 'A valid payment screenshot is required';
   END IF;
@@ -859,3 +859,4 @@ CREATE INDEX IF NOT EXISTS idx_admin_sessions_admin ON public.admin_sessions(adm
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('payment-evidence', 'payment-evidence', false)
 ON CONFLICT (id) DO NOTHING;
+

@@ -1,7 +1,7 @@
--- =============================================================================
+﻿-- =============================================================================
 -- 004_catalog_inventory.sql
 --
--- T003 — Products, Categories & Inventory (admin catalogue).
+-- T003 â€” Products, Categories & Inventory (admin catalogue).
 --
 -- Adds the Phase 1 product-catalogue foundation:
 --   * categories hierarchy (category -> subcategory)
@@ -11,7 +11,7 @@
 --   * product_variants with optional per-variant price and independent stock
 --     (product_inventory.variant_id)
 --   * inventory_logs.variant_id for variant-level audit
---   * public.current_price() — the single source of truth for the effective
+--   * public.current_price() â€” the single source of truth for the effective
 --     selling price (sale price while the sale window is active)
 --   * order-price integrity: create_order_with_payment now prices from
 --     current_price(), and transition_order_status deducts stock without a
@@ -122,7 +122,7 @@ ALTER TABLE public.inventory_logs
   ADD COLUMN IF NOT EXISTS variant_id UUID REFERENCES public.product_variants(id) ON DELETE SET NULL;
 
 -- ---------------------------------------------------------------------------
--- Effective selling price — STABLE so it can be used in SQL queries guardedly.
+-- Effective selling price â€” STABLE so it can be used in SQL queries guardedly.
 -- Sale is active when a sale price exists and the window covers NOW() (an open
 -- window with both dates NULL means "sale always on").
 -- ---------------------------------------------------------------------------
@@ -205,10 +205,10 @@ BEGIN
      OR char_length(trim(p_customer_name)) = 0
      OR p_customer_email IS NULL
      OR char_length(trim(p_customer_email)) = 0
-     OR p_customer_email NOT ~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'
+     OR p_customer_email !~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'
      OR p_customer_phone IS NULL
      OR char_length(trim(p_customer_phone)) = 0
-     OR p_customer_phone NOT ~ '^(?:\+92|0|92)3[0-9]{8,9}$'
+     OR p_customer_phone !~ '^(?:\+92|0|92)3[0-9]{8,9}$'
      OR (p_delivery_method = 'courier' AND (p_customer_address IS NULL OR char_length(trim(p_customer_address)) = 0)) THEN
     RAISE EXCEPTION 'Invalid order details';
   END IF;
@@ -229,7 +229,7 @@ BEGIN
     p_payment_evidence IS NULL
     OR char_length(trim(p_payment_evidence)) < 1
     OR char_length(trim(p_payment_evidence)) > 500
-    OR trim(p_payment_evidence) NOT ~ '^payment-evidence/[0-9a-fA-F-]{36}\.(png|jpe?g|webp)$'
+    OR trim(p_payment_evidence) !~ '^payment-evidence/[0-9a-fA-F-]{36}\.(png|jpe?g|webp)$'
   ) THEN
     RAISE EXCEPTION 'A valid payment screenshot is required';
   END IF;
@@ -256,7 +256,7 @@ BEGIN
       RAISE EXCEPTION 'Invalid order item quantity';
     END IF;
 
-    -- Price from the effective selling price (sale-aware) — migration 004.
+    -- Price from the effective selling price (sale-aware) â€” migration 004.
     SELECT public.current_price(p.*)
     INTO product_price
     FROM public.products p
@@ -518,7 +518,7 @@ END;
 $$;
 
 -- ---------------------------------------------------------------------------
--- Admin catalogue operations — SECURITY DEFINER, service_role only.
+-- Admin catalogue operations â€” SECURITY DEFINER, service_role only.
 -- All writes to products / product_variants / product_inventory go through
 -- these RPCs so that creation, variant inventory setup and the
 -- product-level <-> variant mode invariant are applied transactionally.
@@ -869,7 +869,7 @@ BEGIN
 
   IF p_variant_id IS NULL THEN
     IF EXISTS (SELECT 1 FROM public.product_variants v WHERE v.product_id = p_product_id) THEN
-      RAISE EXCEPTION 'This product uses variants — adjust a specific variant instead';
+      RAISE EXCEPTION 'This product uses variants â€” adjust a specific variant instead';
     END IF;
     SELECT quantity INTO current_quantity
     FROM public.product_inventory

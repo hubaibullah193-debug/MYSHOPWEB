@@ -20,15 +20,22 @@ export function useAuth() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    const client = supabase
+    if (!client?.auth || !client.from) {
+      setError('Authentication is not configured')
+      setLoading(false)
+      return
+    }
+
     const checkAuth = async () => {
       try {
         const {
           data: { session },
-        } = await supabase.auth.getSession()
+        } = await client.auth.getSession()
 
         if (session?.user) {
           // Fetch full user profile
-          const { data: userProfile, error: userError } = await supabase
+          const { data: userProfile, error: userError } = await client
             .from('users')
             .select('*')
             .eq('id', session.user.id)
@@ -52,9 +59,9 @@ export function useAuth() {
     // Subscribe to auth state changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event: string, session: Session | null) => {
+    } = client.auth.onAuthStateChange(async (_event: string, session: Session | null) => {
       if (session?.user) {
-        const { data: userProfile } = await supabase
+        const { data: userProfile } = await client
           .from('users')
           .select('*')
           .eq('id', session.user.id)
