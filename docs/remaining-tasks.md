@@ -78,7 +78,7 @@ Phase gating follows `docs/PHASES.md` "Phase Gate Process" and `docs/spec.md` §
 ## 1A. Build Unblock & Regressions — execute first, nothing else can start
 
 ### RT-001 — Restore `tsc` and `next build` (fix HEAD regression)
-- **Phase:** 1 · **Priority:** P0 · **Status:** NOT STARTED
+- **Phase:** 1 · **Priority:** P0 · **Status:** DONE — STATIC VERIFIED (2026-10-18)
 - **Objective:** Eliminate the 6 type errors introduced by `36341cf` so type checking and production build pass again.
 - **Spec refs:** §30.2 phase gates; §32.1 functional gates; CLAUDE.md principle 7.
 - **Dependencies:** None (first task).
@@ -852,10 +852,10 @@ Phase gating follows `docs/PHASES.md` "Phase Gate Process" and `docs/spec.md` §
 
 | Phase | Tasks | DONE | BLOCKED / DEFERRED |
 |---|---|---|---|
-| Phase 1 — Core Ecommerce | 32 | 0 | 5 blocked (RT-007/008/009/028/029) |
+| Phase 1 — Core Ecommerce | 32 | 1 | 5 blocked (RT-007/008/009/028/029) |
 | Phase 2 — Admin & Analytics | 8 | 0 | 1 deferred (RT-067 / D-7) |
 | Phase 3 — Printing & Bulk | 6 | 0 | 0 (D-4 sequencing) |
 | Phase 4 — Delivery & Fulfillment | 4 | 0 | 0 |
 | Phase 5 — Marketing & Content | 3 | 0 | 0 |
 | Phase 6 — Production Readiness | 15 | 0 | 4 blocked (RT-051/D-3, RT-057, RT-058, RT-060) |
-| **Total** | **68** | **0** | **10** |
+| **Total** | **68** | **1** | **10** |
