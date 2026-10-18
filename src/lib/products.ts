@@ -118,6 +118,10 @@ export async function getProducts(filters?: {
   minPrice?: number
   maxPrice?: number
 }): Promise<ProductWithInventory[]> {
+  if (!supabase) {
+    throw new Error('Supabase is not configured')
+  }
+
   let query = supabase.from('products').select(PRODUCT_SELECT).eq('is_active', true)
 
   if (filters?.category) {
@@ -145,6 +149,10 @@ export async function getProducts(filters?: {
  * Fetch a single active product by ID with inventory and variants.
  */
 export async function getProductById(id: string): Promise<ProductWithInventory> {
+  if (!supabase) {
+    throw new Error('Supabase is not configured')
+  }
+
   const { data, error } = await supabase
     .from('products')
     .select(PRODUCT_SELECT)
@@ -163,6 +171,10 @@ export async function getProductById(id: string): Promise<ProductWithInventory> 
  * Get active top-level categories for filtering.
  */
 export async function getCategories(): Promise<{ id: string; name: string }[]> {
+  if (!supabase) {
+    throw new Error('Supabase is not configured')
+  }
+
   const { data, error } = await supabase
     .from('categories')
     .select('id, name')
@@ -175,21 +187,4 @@ export async function getCategories(): Promise<{ id: string; name: string }[]> {
   }
 
   return (data as unknown as { id: string; name: string }[]) ?? []
-}
-
-/**
- * Subscribe to real-time inventory updates for a product.
- */
-export function subscribeToProductInventory(
-  productId: string,
-  callback: (quantity: number) => void
-) {
-  return supabase
-    .from('product_inventory')
-    .on('UPDATE', (payload: any) => {
-      if (payload.new.product_id === productId) {
-        callback(Number(payload.new.quantity) || 0)
-      }
-    })
-    .subscribe()
 }

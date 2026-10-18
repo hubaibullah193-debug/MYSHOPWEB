@@ -25,6 +25,10 @@ export interface AdminReview extends PublicReview {
  * removed or unverified reviews never appear).
  */
 export async function getProductReviews(productId: string): Promise<PublicReview[]> {
+  if (!supabase) {
+    throw new Error('Supabase is not configured')
+  }
+
   const { data, error } = await supabase
     .from('public_reviews')
     .select('*')
