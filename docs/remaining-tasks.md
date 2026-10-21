@@ -1,7 +1,7 @@
 # Remaining Tasks — Phased Execution Roadmap
 
 **Created:** 2026-10-08 from a complete read-only end-to-end audit of the codebase at `master` @ `36341cf`.
-**Updated:** 2026-10-08 — restructured into a phase breakdown after re-reading the full project documentation (`docs/spec.md` (1591 lines), `docs/PHASES.md`, `docs/tasks.md`, `docs/PHASE1_VERIFICATION.md`, `docs/README.md`, `docs/DATABASE.md`, `CLAUDE.md`, `AGENTS.md`) against the codebase.
+**Updated:** 2026-10-21 — RT-002 resolved (stash `@{0}` salvaged + dropped); gate snapshot re-run.
 **Authority:** `docs/spec.md` (product spec) → `CLAUDE.md` (constitution) → `AGENTS.md` (agent rules). Where `docs/PHASES.md` conflicts with `docs/spec.md`, the spec wins.
 **Phase model:** the 6 phases of `docs/PHASES.md`. Within each phase, work packages (1A, 2A, …) and tasks are ordered by technical dependency and risk — execute top-down.
 **This file is the single execution roadmap.** Statuses are updated only after verification; tasks are never deleted while unfinished.
@@ -39,6 +39,19 @@
 
 **Known stale documentation (fixed in RT-062):** `docs/PHASES.md`, `docs/PHASE1_VERIFICATION.md`, `docs/README.md`, `docs/tasks.md` gate snapshot, `docs/DATABASE.md`, `supabase/seed.sql`.
 
+### Gate Snapshot (2026-10-21, re-run after RT-001 + RT-002)
+
+| Gate | Result |
+|---|---|
+| `npx tsc --noEmit` | **PASS** — 0 errors (RT-001 restored it) |
+| `npx next build` | **PASS** — 42 routes; 0 "Unsupported metadata viewport" warnings (RT-002 fixed the last 40+) |
+| `npx next lint` | PASS — 0 problems (RT-002 enabled `next/typescript`, still 0 problems) |
+| `npx jest` | PASS — 127 passed / 15 skipped / 9 suites (1 suite skipped: live DB integration) |
+| `npm audit` | FAIL — 47 vulns (2 critical, 38 high, 7 moderate) — `next` + transitive `handlebars`; tracked by RT-051 / **D-3** |
+| Supabase live (DB/RLS/Auth/Storage) | **BLOCKED** — no `.env` credentials; migrations 001–007 never applied |
+| Vercel production | **BLOCKED** — no access/URL |
+| CI | **MISSING** — `.github/` still untracked; RT-003 |
+
 ---
 
 ## Open Decisions (need user input; tracked, not blocking Phase 1 package 1A)
@@ -46,7 +59,7 @@
 | # | Decision | Affects |
 |---|---|---|
 | D-1 | Payment provider for §10.3 online payments (JazzCash/Easypaisa gateway, merchant credentials, webhook URL) | RT-028, RT-029 |
-| D-2 | Stash `stash@{0}` (20 files, +731/−948, overlaps HEAD) — salvage or drop? | RT-002 |
+| D-2 | Stash `stash@{0}` (20 files, +731/−948, overlaps HEAD) — **RESOLVED 2026-10-21: salvage 2 changes, drop the stash** (RT-002) | RT-002 |
 | D-3 | Dependency majors forced by `npm audit` (Next 14→16, Jest 30, ESLint-Config-Next 16, Tailwind 4) — upgrade now or accept audit noise? | RT-051 |
 | D-4 | Spec §4.1 lists Printing Hub / Bulk-order form under Public Pages; `docs/PHASES.md` assigns them to Phase 3. Roadmap places them in Phase 3. Confirm sequencing. | Phase 3 |
 | D-5 | Bilingual i18n (Urdu/English) is **not in `docs/spec.md`** — it originates from PHASES.md/T009. Keep as requirement? | RT-019 |
@@ -91,7 +104,7 @@ Phase gating follows `docs/PHASES.md` "Phase Gate Process" and `docs/spec.md` §
 - **External/live dependencies:** None.
 
 ### RT-002 — Resolve stash `stash@{0}` (T004/T006/T009 WIP)
-- **Phase:** 1 · **Priority:** P0 · **Status:** NOT STARTED (needs **D-2**)
+- **Phase:** 1 · **Priority:** P0 · **Status:** DONE — STATIC VERIFIED (2026-10-21)
 - **Objective:** Diff the stashed WIP (20 files, +731/−948) against `36341cf`; salvage valuable changes into new tasks; drop the stash cleanly. Never blindly restore.
 - **Spec refs:** AGENTS.md rule 2; CLAUDE.md principle 2.
 - **Dependencies:** RT-001.
@@ -99,6 +112,30 @@ Phase gating follows `docs/PHASES.md` "Phase Gate Process" and `docs/spec.md` §
 - **Acceptance criteria:** `git stash show -p stash@{0}` reviewed; decision recorded (salvage → appended tasks, or drop → removed with rationale in commit body); gates stay green.
 - **Verification requirements:** `git stash list` reflects agreed state; gates re-run. `STATIC VERIFIED`.
 - **External/live dependencies:** User decision D-2.
+
+#### RT-002 decision record (D-2, 2026-10-21)
+
+**Method.** `stash@{0}` (ref `02a626b`, created 2026-10-04) was **never restored**. Its three parents were analysed separately:
+`02a626b` = working tree (20 tracked files) · `ac534f1` = untracked files (12 files) · `19480fe` = index (verified **empty** — identical tree to its parent `0a0d8da`, so nothing was hidden in the index).
+
+**Key finding.** The stash was created from `0a0d8da`, i.e. **before** T003–T008 landed. Its WIP was therefore *older* than HEAD, not newer: the "−948" in the diff is mostly HEAD's own T004–T008 work. The apparent size of the diff was misleading, which is why the roadmap flagged it for review rather than a blind restore.
+
+**Per-file comparison (tracked, 20 files).** 11 files reverse-applied cleanly against HEAD (`.gitignore`, `next.config.js`, `src/app/admin/activity/page.tsx`, `src/app/admin/orders/page.tsx`, `src/app/admin/orders/[id]/page.tsx`, `src/components/ProductFilters.tsx`, `src/hooks/useAuth.ts`, `src/lib/activity-logs.ts`, `src/lib/cart-context.tsx`, `src/lib/orders.test.ts`, `src/lib/supabase.ts`) → stash content already present in HEAD. 9 files diverged; each was diffed line-by-line and every one is a **strict superset** in HEAD (`src/app/admin/payments/page.tsx`, `src/app/api/orders/route.ts`, `src/app/shop/checkout/page.tsx`, `src/app/shop/layout.tsx`, `src/app/shop/order-confirmation/[id]/page.tsx`, `src/lib/orders.ts`, `src/lib/payments.ts`, `src/lib/products.ts`, `src/app/layout.tsx`). Only `src/app/layout.tsx` held anything HEAD lacked.
+
+**Untracked files (12).** All exist in HEAD with expanded content (`src/lib/validation.ts` +107 lines incl. delivery-zone / payment-status / review / product-request parsers, `src/lib/validation.test.ts` +137, every `/api/admin/*` route, `src/app/shop/track/page.tsx`). Nothing lost.
+
+**Salvaged (2 changes, applied and verified):**
+1. `src/app/layout.tsx` — `viewport` moved out of `metadata` into the dedicated `export const viewport: Viewport` (Next.js 14 deprecation). Cleared the last **40+** `Unsupported metadata viewport` build warnings.
+2. `.eslintrc.json` — `extends` now `["next/core-web-vitals", "next/typescript"]` (the config the stash carried; also Next.js' officially recommended TS lint setup). It surfaced 2 genuine violations, fixed in the same change: unused `_product` parameter in `src/app/admin/products/new/page.tsx` and `src/app/admin/products/[id]/page.tsx` (plus the then-unused `ProductClient` import in the "new" page).
+
+**Rejected (recorded, not salvaged):**
+- `src/lib/products.ts` → `subscribeToProductInventory` (supabase-js v2 realtime channel rewrite): no spec requirement for push-based inventory updates (§6/§9 are silent), no callers, and RT-001 deliberately removed the dead v1 `.on()` implementation. Re-adding it would reintroduce unused code.
+- `src/lib/supabase.ts` cookie storage: byte-identical to HEAD. It is the **JS-readable `document.cookie` storage** that RT-006 replaces with HttpOnly server-set cookies — deliberately not treated as salvage, it stays on the RT-006 hit list.
+- Remaining 18 tracked + 12 untracked files: superseded by T003–T008 (see above).
+
+**No follow-up tasks spawned** — nothing in the stash maps to an unbuilt spec requirement. RT-004 (sale/variant pricing), RT-005 (middleware fail-open) and RT-006 (HttpOnly cookies) already cover the areas the WIP touched and remain open and unmodified by RT-002.
+
+**Drop.** `git stash drop stash@{0}` executed **after** the salvage was committed and pushed; the drop rationale is recorded in the RT-002 commit body. `git stash list` is empty.
 
 ### RT-003 — Add CI pipeline (regression protection)
 - **Phase:** 1 · **Priority:** P0 · **Status:** NOT STARTED
@@ -852,10 +889,10 @@ Phase gating follows `docs/PHASES.md` "Phase Gate Process" and `docs/spec.md` §
 
 | Phase | Tasks | DONE | BLOCKED / DEFERRED |
 |---|---|---|---|
-| Phase 1 — Core Ecommerce | 32 | 1 | 5 blocked (RT-007/008/009/028/029) |
+| Phase 1 — Core Ecommerce | 32 | 2 | 5 blocked (RT-007/008/009/028/029) |
 | Phase 2 — Admin & Analytics | 8 | 0 | 1 deferred (RT-067 / D-7) |
 | Phase 3 — Printing & Bulk | 6 | 0 | 0 (D-4 sequencing) |
 | Phase 4 — Delivery & Fulfillment | 4 | 0 | 0 |
 | Phase 5 — Marketing & Content | 3 | 0 | 0 |
 | Phase 6 — Production Readiness | 15 | 0 | 4 blocked (RT-051/D-3, RT-057, RT-058, RT-060) |
-| **Total** | **68** | **1** | **10** |
+| **Total** | **68** | **2** | **10** |
