@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import ProductForm from '@/components/admin/ProductForm'
-import { listCategories, type CategoryClient, type ProductClient } from '@/lib/catalog-client'
+import { listCategories, type CategoryClient } from '@/lib/catalog-client'
 import { ErrorBanner, Spinner } from '@/components/admin/fields'
 
 export default function NewProductPage() {
@@ -29,7 +29,7 @@ export default function NewProductPage() {
     }
   }, [])
 
-  const handleSaved = (_product: ProductClient) => {
+  const handleSaved = () => {
     router.push('/admin/products')
   }
 

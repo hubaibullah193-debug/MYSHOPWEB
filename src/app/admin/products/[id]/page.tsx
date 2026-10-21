@@ -35,7 +35,7 @@ export default function EditProductPage() {
     }
   }, [id])
 
-  const handleSaved = (_product: ProductClient) => {
+  const handleSaved = () => {
     router.push('/admin/products')
   }
 
