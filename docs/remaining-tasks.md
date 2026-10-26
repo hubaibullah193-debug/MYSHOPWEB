@@ -1,7 +1,7 @@
 # Remaining Tasks — Phased Execution Roadmap
 
 **Created:** 2026-10-08 from a complete read-only end-to-end audit of the codebase at `master` @ `36341cf`.
-**Updated:** 2026-10-21 — RT-002 resolved (stash `@{0}` salvaged + dropped); gate snapshot re-run.
+**Updated:** 2026-10-26 — RT-003 done: GitHub Actions CI tracked and green on `master` (run `40385189657`).
 **Authority:** `docs/spec.md` (product spec) → `CLAUDE.md` (constitution) → `AGENTS.md` (agent rules). Where `docs/PHASES.md` conflicts with `docs/spec.md`, the spec wins.
 **Phase model:** the 6 phases of `docs/PHASES.md`. Within each phase, work packages (1A, 2A, …) and tasks are ordered by technical dependency and risk — execute top-down.
 **This file is the single execution roadmap.** Statuses are updated only after verification; tasks are never deleted while unfinished.
@@ -51,6 +51,18 @@
 | Supabase live (DB/RLS/Auth/Storage) | **BLOCKED** — no `.env` credentials; migrations 001–007 never applied |
 | Vercel production | **BLOCKED** — no access/URL |
 | CI | **MISSING** — `.github/` still untracked; RT-003 |
+
+### Gate Snapshot (2026-10-26, CI added)
+
+| Gate | Result |
+|---|---|
+| GitHub Actions `CI` | **PASS** — push `40384947356` (54s) and `40385189657` (1m1s) both green; checkout → setup-node 24 → `npm ci` → typecheck → lint → jest → build |
+| `npx tsc --noEmit` | PASS — 0 errors (local, `CI=true`) |
+| `npx next lint` | PASS — 0 problems (local, `CI=true`) |
+| `npx jest --ci` | PASS — 127 passed / 15 skipped / 9 suites (live DB suite skips without creds) |
+| `npx next build` | PASS — 42 routes, 0 warnings |
+| Supabase live (DB/RLS/Auth/Storage) | **BLOCKED** — no `.env` credentials; migrations 001–007 never applied |
+| Vercel production | **BLOCKED** — no access/URL |
 
 ---
 
@@ -138,7 +150,7 @@ Phase gating follows `docs/PHASES.md` "Phase Gate Process" and `docs/spec.md` §
 **Drop.** `git stash drop stash@{0}` executed **after** the salvage was committed and pushed; the drop rationale is recorded in the RT-002 commit body. `git stash list` is empty.
 
 ### RT-003 — Add CI pipeline (regression protection)
-- **Phase:** 1 · **Priority:** P0 · **Status:** NOT STARTED
+- **Phase:** 1 · **Priority:** P0 · **Status:** DONE — STATIC VERIFIED + LIVE CI RUN (2026-10-26)
 - **Objective:** Every push/PR runs typecheck, lint, unit tests and build; commit `.github/` intentionally (currently untracked).
 - **Spec refs:** §29.1; §30.2; CLAUDE.md principle 7.
 - **Dependencies:** RT-001 (first run must be green).
@@ -146,6 +158,21 @@ Phase gating follows `docs/PHASES.md` "Phase Gate Process" and `docs/spec.md` §
 - **Acceptance criteria:** Workflow runs `tsc --noEmit`, `next lint`, `jest --ci`, `next build` on push/PR to `master`; no secrets exposed; live DB tests skip cleanly without creds; CI workflow tracked in git.
 - **Verification requirements:** Local run of all four commands + GitHub Actions run log after push. `STATIC VERIFIED` + live confirmation.
 - **External/live dependencies:** GitHub Actions.
+
+#### RT-003 decision record (2026-10-26)
+
+**Workflow.** Single `quality` job in `.github/workflows/ci.yml`, triggered on `push` and `pull_request` to `master`, with `concurrency` cancel-in-progress per ref and `permissions: contents: read`. Steps: `actions/checkout@v5` (`persist-credentials: false`) → `actions/setup-node@v5` (Node **24** = the locally verified runtime, npm cache) → `npm ci` → `npm run type-check` → `npm run lint` → `npm test -- --ci` → `npm run build`. `CI=true` and `NEXT_TELEMETRY_DISABLED=1` are set; no secrets, env vars or write permissions are used.
+
+**Runtime choice.** v4 actions target Node.js 20, which GitHub now force-migrates to Node.js 24 and flags in run annotations; bumped to v5 after the first run. Node 24 matches the local toolchain (v24.17.0 / npm 11.13.0, lockfile v3), so `npm ci` resolves identically to the verified local gates.
+
+**`.github/workflows/opencode.yml`.** Committed as part of this task per the explicit scope note in RT-003 (it was the only other untracked file under `.github/`). It is the existing opencode comment-triggered workflow; it references `secrets.OPENCODE_API_KEY` by name only (no value in repo) and keeps `permissions: id-token: write` for the opencode action — unchanged from what was on disk.
+
+**Verification.**
+- Local (`CI=true`, same commands as CI): typecheck exit 0 · lint 0 problems · jest 127 passed / 15 skipped / 9 suites (live DB suite skipped, no creds) · build exit 0, 42 routes, 0 warnings.
+- GitHub Actions on `master`: run [`40384947356`](https://github.com/hubaibullah193-debug/MYSHOPWEB/actions/runs/40384947356) **success** 54s (v4 actions); run [`40385189657`](https://github.com/hubaibullah193-debug/MYSHOPWEB/actions/runs/40385189657) **success** 1m1s (v5 actions) — all steps green, install/typecheck/lint/test/build included.
+- Remaining annotation: informational `ubuntu-latest` → Ubuntu 26 migration notice (runner-image scheduling, not a failure).
+
+**Not changed:** `package.json` needed no changes (`type-check`, `lint`, `test`, `build` scripts already existed); no app code, dependencies or lockfile touched.
 
 ## 1B. Correctness & Security Foundations
 
@@ -889,10 +916,10 @@ Phase gating follows `docs/PHASES.md` "Phase Gate Process" and `docs/spec.md` §
 
 | Phase | Tasks | DONE | BLOCKED / DEFERRED |
 |---|---|---|---|
-| Phase 1 — Core Ecommerce | 32 | 2 | 5 blocked (RT-007/008/009/028/029) |
+| Phase 1 — Core Ecommerce | 32 | 3 | 5 blocked (RT-007/008/009/028/029) |
 | Phase 2 — Admin & Analytics | 8 | 0 | 1 deferred (RT-067 / D-7) |
 | Phase 3 — Printing & Bulk | 6 | 0 | 0 (D-4 sequencing) |
 | Phase 4 — Delivery & Fulfillment | 4 | 0 | 0 |
 | Phase 5 — Marketing & Content | 3 | 0 | 0 |
 | Phase 6 — Production Readiness | 15 | 0 | 4 blocked (RT-051/D-3, RT-057, RT-058, RT-060) |
-| **Total** | **68** | **2** | **10** |
+| **Total** | **68** | **3** | **10** |
