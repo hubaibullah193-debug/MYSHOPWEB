@@ -1,0 +1,5 @@
+﻿Target: uqzldnmdbapyeeosoncn
+Migration list: local 001-007, no remote entries
+Push attempt: failed at 001 - relation users already exists
+Status: stopped, no migrations applied, no destructive ops
+Action needed: inspect existing schema, backup in Dashboard, reconcile before proceeding
