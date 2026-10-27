@@ -88,8 +88,9 @@
 **Verification:** Migration logs, `verify_phase1.sql` output, jest live logs, browser session evidence. All marked `LIVE VERIFIED` or `BLOCKED` with rationale.
 
 **Blockers (only remaining):** 
+- **Project paused:** Supabase project `nvubeekyukbcbxghurpk` (MyShopWeb) is paused. Must be unpaused in Supabase Dashboard before any DB access/migrations.
 - `.env.local` with: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (required for app + server). I will not print values.
-- For read-only migration check: either `DATABASE_URL` (Postgres) or access to run read-only queries against the project. For live integration tests: `SUPABASE_TEST_URL`, `SUPABASE_TEST_SERVICE_ROLE_KEY`, optionally `SUPABASE_TEST_ANON_KEY`.
+- For read-only migration status: `DATABASE_URL` (Postgres URI) or after unpausing run read-only queries. For live integration tests: `SUPABASE_TEST_URL`, `SUPABASE_TEST_SERVICE_ROLE_KEY`, optionally `SUPABASE_TEST_ANON_KEY`.
 - Payment: **resolved** (COD + manual JazzCash/Easypaisa). No gateway creds needed now.
 - No destructive/irreversible DB ops will be run without explicit permission.
 
