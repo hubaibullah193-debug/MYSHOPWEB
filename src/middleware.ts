@@ -10,6 +10,15 @@ export async function middleware(request: NextRequest) {
     !process.env.NEXT_PUBLIC_SUPABASE_URL ||
     !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   ) {
+    const pathname = request.nextUrl.pathname
+    if (ADMIN_PUBLIC_PATHS.includes(pathname)) {
+      return NextResponse.next()
+    }
+    if (pathname.startsWith('/admin')) {
+      const response = NextResponse.redirect(new URL('/admin/login', request.url))
+      response.headers.set('X-Middleware-Block', 'missing-supabase-env')
+      return response
+    }
     return NextResponse.next()
   }
 

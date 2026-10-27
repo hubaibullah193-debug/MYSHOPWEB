@@ -3,14 +3,23 @@ interface RateEntry {
   resetAt: number
 }
 
-const entries = new Map<string, RateEntry>()
+function getGlobalStore(): Map<string, RateEntry> {
+  const globalScope = globalThis as typeof globalThis & {
+    __hubaibRateLimitStore?: Map<string, RateEntry>
+  }
+  if (!globalScope.__hubaibRateLimitStore) {
+    globalScope.__hubaibRateLimitStore = new Map<string, RateEntry>()
+  }
+  return globalScope.__hubaibRateLimitStore
+}
 
 export function enforceRateLimit(key: string, limit: number, windowMs: number): void {
+  const store = getGlobalStore()
   const now = Date.now()
-  const current = entries.get(key)
+  const current = store.get(key)
 
   if (!current || current.resetAt <= now) {
-    entries.set(key, { count: 1, resetAt: now + windowMs })
+    store.set(key, { count: 1, resetAt: now + windowMs })
     return
   }
 
