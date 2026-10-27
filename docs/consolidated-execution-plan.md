@@ -220,11 +220,11 @@
 4. Never claim production readiness without necessary evidence.
 
 **Migration safety review (001–007)**
-- Target: uqzldnmdbapyeeosoncn (linked). Remote has none applied; all 001–007 pending.
+- Target: `uqzldnmdbapyeeosoncn` (linked). Remote has none applied; all 001–007 pending.
+- Connection: REST via service role currently failing (`fetch failed`) — may be network/firewall; CLI migration list works via linked project.
 - Destructive: 001 uses FK CASCADE, 003/004/005 use DROP POLICY/FUNCTION IF EXISTS (idempotent), no unguarded DROP TABLE/TRUNCATE.
 - Ordering: 001→002→003→004→005→006→007.
-- Data risk: fresh/empty likely low; backup recommended.
-- Backup: Supabase Dashboard → Database → Backups (or supabase db dump).
-- Commands (NOT run): supabase db push --linked --include-all after backup.
-- Risks: policy/function changes affect access. No seed yet.
+- Data risk: fresh/empty likely low; **backup recommended** (Dashboard → Database → Backups) before applying.
+- Commands: `supabase db push --linked --include-all` (after backup). Verify with `supabase migration list`.
+- Risks: policy/function changes affect access. No seed yet. Cannot confirm existing data via REST now; rely on Dashboard backup. No destructive ops without approval.
 
