@@ -218,3 +218,13 @@
 2. After commit hash obtained, ask for permission to begin **STEP 1** (foundations). Execute one step at a time, verify, commit+push step, update roadmap with evidence, stop for approval before next step.
 3. If external dependencies block part of a step, complete independent work and document blocked portion.
 4. Never claim production readiness without necessary evidence.
+
+**Migration safety review (001–007)**
+- Target: uqzldnmdbapyeeosoncn (linked). Remote has none applied; all 001–007 pending.
+- Destructive: 001 uses FK CASCADE, 003/004/005 use DROP POLICY/FUNCTION IF EXISTS (idempotent), no unguarded DROP TABLE/TRUNCATE.
+- Ordering: 001→002→003→004→005→006→007.
+- Data risk: fresh/empty likely low; backup recommended.
+- Backup: Supabase Dashboard → Database → Backups (or supabase db dump).
+- Commands (NOT run): supabase db push --linked --include-all after backup.
+- Risks: policy/function changes affect access. No seed yet.
+
