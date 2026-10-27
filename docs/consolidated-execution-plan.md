@@ -11,7 +11,7 @@
 - **Already DONE (verified):** RT-001, RT-002, RT-003 (static/live CI green)  
 - **Blocked (external/decisions):** RT-007, RT-008, RT-009, RT-028, RT-029, RT-051 (D-3), RT-057, RT-058, RT-060 (10 total)  
 - **Deferred:** RT-067 (D-7)  
-- **Decisions open:** D-1 (payments), D-3 (audit majors), D-4 (printing/bulk sequencing — treat as included in Step 2), D-5 (i18n), D-6 (maps), D-7 (SMTP)  
+- **Decisions open:** D-1 **DECIDED (COD + manual JazzCash/Easypaisa)**, D-3 (audit majors), D-4 (printing/bulk sequencing — treat as included in Step 2), D-5 (i18n), D-6 (maps), D-7 (SMTP)  
 
 **Current gates (from docs):** `tsc`/`lint`/`jest`/`build` PASS locally and CI green. Supabase live and Vercel prod blocked (no creds/access). npm audit has 47 vulns (tracked by RT-051/D-3).
 
@@ -58,8 +58,8 @@
 - **RT-007** Supabase project setup: `.env.local`, apply migrations 001–007, seed intentionally (post RT-064 seed fix) — **BLOCKED** on creds/migration status
 - **RT-008** Run `verify_phase1.sql` + `db.integration.test.ts` live — **BLOCKED** on RT-007
 - **RT-009** Live verification of auth/RBAC/storage/RPCs + RT-004/005/006 — **BLOCKED** on RT-004/005/006/007/008
-- **RT-028** Payment provider decision & credentials (D-1) — **BLOCKED** on user decision
-- **RT-029** Gateway integration + webhook verification — **BLOCKED** on RT-028, RT-004
+- **RT-028** Payment provider decision & credentials (D-1) — **DONE/WAIVED (manual verification)** (2026-10-27)
+- **RT-029** Gateway integration + webhook verification — **DEFERRED (automatic integration)** (2026-10-27)
 
 **Findings (inspected):**
 - `.env.local` **not present** (only `.env.example`). Secrets never printed.
@@ -74,8 +74,8 @@
 3. **RT-009:** Live browser tests (guest→cart→checkout COD, admin RBAC, uploads validation, zone fees, password reset). Verify RT-004/005/006 in live env.
 
 **RT-028–RT-029:**
-- **RT-028:** Decide provider (JazzCash/Easypaisa), get merchant creds + webhook URL, document contract. **BLOCKED on user decision (D-1)**.
-- **RT-029:** Implement gateway integration + signed webhook + idempotency + refunds only after RT-028; can be waived for COD-only (record waiver).
+- **RT-028:** **DECIDED/WAIVED** — Use COD + manual JazzCash/Easypaisa verification for initial launch. No automatic gateway needed now.
+- **RT-029:** **DEFERRED** — Automatic payment gateway integration deferred to later phase if needed. Manual verification workflow already supported by schema/API.
 
 **Expected outcome:** Real DB verified with RLS/integrations passing, live auth flows working securely, payments path defined/implemented or explicitly COD-only with waiver.
 
@@ -83,14 +83,14 @@
 1. RT-007: migrations applied cleanly, `.env.local` ignored, schema matches audit. **BLOCKED**
 2. RT-008: all verification labels PASS, 13 integration tests pass. **BLOCKED**
 3. RT-009: guest→cart→checkout (COD) works with correct totals; admin RBAC enforced; uploads validated; zone fees from DB; password reset path tested or gap recorded. **BLOCKED**
-4. RT-028/029: provider chosen/creds in hand, webhook verification + idempotency + refunds implemented or user waives online payments (record waiver). **BLOCKED (D-1)**
+4. RT-028/029: **DECIDED** — COD + manual JazzCash/Easypaisa verification; automatic gateway deferred. **DONE/WAIVED/DEFERRED** (2026-10-27)
 
 **Verification:** Migration logs, `verify_phase1.sql` output, jest live logs, browser session evidence. All marked `LIVE VERIFIED` or `BLOCKED` with rationale.
 
 **Blockers (only remaining):** 
-- `.env.local` with Supabase keys (URL, anon, service-role). Share securely or confirm location; I will not print values.
-- Confirm which migrations applied (I can check via SQL if you provide connection method; no DB reset/duplication).
-- Payment decision (D-1): JazzCash/Easypaisa or COD-only waiver. If online, need creds + webhook URL.
+- `.env.local` with Supabase keys (URL, anon, service-role). I will not print values. Configure securely.
+- Confirm/read migration status against remote DB (read-only). No DB reset/duplication; no migrations applied without explicit approval.
+- Payment: **resolved** (COD + manual JazzCash/Easypaisa). No gateway creds needed now.
 - No destructive/irreversible DB ops will be run without explicit permission.
 
 **Completion:** Live environment proven or blocked with explicit user decisions recorded.
