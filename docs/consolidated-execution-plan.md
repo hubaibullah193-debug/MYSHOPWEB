@@ -55,16 +55,27 @@
 **Status:** **IN PROGRESS — BLOCKED ON EXTERNAL DEPENDENCIES** (2026-10-27)
 
 **Included (merged):**
-- **RT-007** Supabase project setup: `.env.local`, apply migrations 001–007, seed intentionally (post RT-064 seed fix) — **BLOCKED** on creds
+- **RT-007** Supabase project setup: `.env.local`, apply migrations 001–007, seed intentionally (post RT-064 seed fix) — **BLOCKED** on creds/migration status
 - **RT-008** Run `verify_phase1.sql` + `db.integration.test.ts` live — **BLOCKED** on RT-007
 - **RT-009** Live verification of auth/RBAC/storage/RPCs + RT-004/005/006 — **BLOCKED** on RT-004/005/006/007/008
 - **RT-028** Payment provider decision & credentials (D-1) — **BLOCKED** on user decision
 - **RT-029** Gateway integration + webhook verification — **BLOCKED** on RT-028, RT-004
 
-**Prep completed (code/docs):**
-- Reviewed migrations 001–007, `verify_phase1.sql`, `db.integration.test.ts`, `.env.example`
-- Confirmed server/client auth patterns, middleware, orders API with sale-aware pricing
-- Documented blockers and required secrets
+**Findings (inspected):**
+- `.env.local` **not present** (only `.env.example`). Secrets never printed.
+- `supabase/migrations/` has **001–007** (all present). Pushing files ≠ applied; **migration status unknown** until checked against remote DB.
+- `supabase/tests/verify_phase1.sql` exists (extends through migration 005 checks); `src/lib/db.integration.test.ts` has 13 tests gated by `SUPABASE_TEST_*` env vars.
+- No `supabase/config.toml`. Git history shows migrations added in earlier commits (not modified now). No `.env*` tracked.
+- Existing code: sale-aware orders API updated (Step 1), middleware hardened, rate-limit improved.
+
+**Exact remaining for RT-007–RT-009:**
+1. **RT-007:** Create `.env.local` with `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (git-ignored). Determine which of 001–007 already applied on remote; apply only missing in order (never reset/duplicate). Review `supabase/seed.sql` for schema fit (RT-064 will reconcile). 
+2. **RT-008:** Run `psql "$DATABASE_URL" -f supabase/tests/verify_phase1.sql` and `SUPABASE_TEST_URL/SUPABASE_TEST_SERVICE_ROLE_KEY[/SUPABASE_TEST_ANON_KEY] npx jest db.integration.test.ts --runInBand`. All labels PASS, 13 tests pass.
+3. **RT-009:** Live browser tests (guest→cart→checkout COD, admin RBAC, uploads validation, zone fees, password reset). Verify RT-004/005/006 in live env.
+
+**RT-028–RT-029:**
+- **RT-028:** Decide provider (JazzCash/Easypaisa), get merchant creds + webhook URL, document contract. **BLOCKED on user decision (D-1)**.
+- **RT-029:** Implement gateway integration + signed webhook + idempotency + refunds only after RT-028; can be waived for COD-only (record waiver).
 
 **Expected outcome:** Real DB verified with RLS/integrations passing, live auth flows working securely, payments path defined/implemented or explicitly COD-only with waiver.
 
@@ -76,7 +87,11 @@
 
 **Verification:** Migration logs, `verify_phase1.sql` output, jest live logs, browser session evidence. All marked `LIVE VERIFIED` or `BLOCKED` with rationale.
 
-**Blockers:** Need `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` in `.env.local` (git-ignored). Need payment provider decision + creds (JazzCash/Easypaisa) or COD-only waiver. No code changes made in this step due to missing external dependencies.
+**Blockers (only remaining):** 
+- `.env.local` with Supabase keys (URL, anon, service-role). Share securely or confirm location; I will not print values.
+- Confirm which migrations applied (I can check via SQL if you provide connection method; no DB reset/duplication).
+- Payment decision (D-1): JazzCash/Easypaisa or COD-only waiver. If online, need creds + webhook URL.
+- No destructive/irreversible DB ops will be run without explicit permission.
 
 **Completion:** Live environment proven or blocked with explicit user decisions recorded.
 
