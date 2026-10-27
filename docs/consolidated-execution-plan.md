@@ -220,11 +220,11 @@
 4. Never claim production readiness without necessary evidence.
 
 **Migration safety review (001–007)**
-- Target: `uqzldnmdbapyeeosoncn` (linked). Remote has none applied; all 001–007 pending.
-- Connection: REST via service role currently failing (`fetch failed`) — may be network/firewall; CLI migration list works via linked project.
+- Target: `uqzldnmdbapyeeosoncn` (linked). 
+- Applied: `supabase db push` attempted; migration **001 failed** with `relation "users" already exists` (SQLSTATE 42P07). Some objects may already exist on remote DB despite migration history not showing applied entries.
 - Destructive: 001 uses FK CASCADE, 003/004/005 use DROP POLICY/FUNCTION IF EXISTS (idempotent), no unguarded DROP TABLE/TRUNCATE.
 - Ordering: 001→002→003→004→005→006→007.
-- Data risk: fresh/empty likely low; **backup recommended** (Dashboard → Database → Backups) before applying.
-- Commands: `supabase db push --linked --include-all` (after backup). Verify with `supabase migration list`.
-- Risks: policy/function changes affect access. No seed yet. Cannot confirm existing data via REST now; rely on Dashboard backup. No destructive ops without approval.
+- Data risk: **UNKNOWN** — existing schema/tables detected. Do **NOT** blindly continue. Need to inspect existing schema and reconcile.
+- Action taken: stopped after 001 failure. No further migrations applied.
+- Next: inspect existing tables/RLS/functions, adjust migrations or skip/reconcile; create backup before any changes. No destructive ops without approval.
 
