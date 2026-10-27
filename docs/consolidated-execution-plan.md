@@ -88,8 +88,8 @@
 **Verification:** Migration logs, `verify_phase1.sql` output, jest live logs, browser session evidence. All marked `LIVE VERIFIED` or `BLOCKED` with rationale.
 
 **Blockers (only remaining):** 
-- `.env.local` with Supabase keys (URL, anon, service-role). I will not print values. Configure securely.
-- Confirm/read migration status against remote DB (read-only). No DB reset/duplication; no migrations applied without explicit approval.
+- `.env.local` with: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (required for app + server). I will not print values.
+- For read-only migration check: either `DATABASE_URL` (Postgres) or access to run read-only queries against the project. For live integration tests: `SUPABASE_TEST_URL`, `SUPABASE_TEST_SERVICE_ROLE_KEY`, optionally `SUPABASE_TEST_ANON_KEY`.
 - Payment: **resolved** (COD + manual JazzCash/Easypaisa). No gateway creds needed now.
 - No destructive/irreversible DB ops will be run without explicit permission.
 
