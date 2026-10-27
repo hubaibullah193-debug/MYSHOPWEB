@@ -51,7 +51,8 @@
 ### STEP 2: Live Environment, Data, Auth & Payments Foundation
 **Purpose:** Stand up real Supabase, verify schema/RLS/integration, complete live auth/RBAC/storage/RPC verification, and resolve/prepare payments (decision-gated).  
 **Depends on:** Step 1  
-**Blocks:** Customer experience features that need real data (Steps 3), some admin features.
+**Blocks:** Customer experience features that need real data (Steps 3), some admin features.  
+**Status:** **IN PROGRESS — BLOCKED ON EXTERNAL DEPENDENCIES** (2026-10-27)
 
 **Included (merged):**
 - **RT-007** Supabase project setup: `.env.local`, apply migrations 001–007, seed intentionally (post RT-064 seed fix) — **BLOCKED** on creds
@@ -60,15 +61,22 @@
 - **RT-028** Payment provider decision & credentials (D-1) — **BLOCKED** on user decision
 - **RT-029** Gateway integration + webhook verification — **BLOCKED** on RT-028, RT-004
 
+**Prep completed (code/docs):**
+- Reviewed migrations 001–007, `verify_phase1.sql`, `db.integration.test.ts`, `.env.example`
+- Confirmed server/client auth patterns, middleware, orders API with sale-aware pricing
+- Documented blockers and required secrets
+
 **Expected outcome:** Real DB verified with RLS/integrations passing, live auth flows working securely, payments path defined/implemented or explicitly COD-only with waiver.
 
 **Acceptance criteria:**
-1. RT-007: migrations applied cleanly, `.env.local` ignored, schema matches audit.
-2. RT-008: all verification labels PASS, 13 integration tests pass.
-3. RT-009: guest→cart→checkout (COD) works with correct totals; admin RBAC enforced; uploads validated; zone fees from DB; password reset path tested or gap recorded.
-4. RT-028/029: provider chosen/creds in hand, webhook verification + idempotency + refunds implemented or user waives online payments (record waiver).
+1. RT-007: migrations applied cleanly, `.env.local` ignored, schema matches audit. **BLOCKED**
+2. RT-008: all verification labels PASS, 13 integration tests pass. **BLOCKED**
+3. RT-009: guest→cart→checkout (COD) works with correct totals; admin RBAC enforced; uploads validated; zone fees from DB; password reset path tested or gap recorded. **BLOCKED**
+4. RT-028/029: provider chosen/creds in hand, webhook verification + idempotency + refunds implemented or user waives online payments (record waiver). **BLOCKED (D-1)**
 
 **Verification:** Migration logs, `verify_phase1.sql` output, jest live logs, browser session evidence. All marked `LIVE VERIFIED` or `BLOCKED` with rationale.
+
+**Blockers:** Need `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` in `.env.local` (git-ignored). Need payment provider decision + creds (JazzCash/Easypaisa) or COD-only waiver. No code changes made in this step due to missing external dependencies.
 
 **Completion:** Live environment proven or blocked with explicit user decisions recorded.
 
